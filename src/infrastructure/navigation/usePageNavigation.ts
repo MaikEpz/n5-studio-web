@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Lenis from 'lenis'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { sectionIds, type SectionId } from '@application/navigation/navigation'
+import { navigationItems, pageFromPathname, type PageId } from '@application/navigation/navigation'
 
 export function usePageNavigation(enabled = true) {
   const lenisRef = useRef<Lenis | null>(null)
-  const [active, setActive] = useState<SectionId>('inicio')
+  const [active, setActive] = useState<PageId>(() => pageFromPathname(window.location.pathname))
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -21,28 +21,21 @@ export function usePageNavigation(enabled = true) {
     return () => { gsap.ticker.remove(update); lenis.destroy(); lenisRef.current = null }
   }, [enabled])
 
-  const navigate = useCallback((id: string, replace = false) => {
-    const target = document.getElementById(id)
-    if (!target) return
-    history[replace ? 'replaceState' : 'pushState'](null, '', `#${id}`)
-    if (lenisRef.current) lenisRef.current.scrollTo(target, { offset: -70 })
-    else target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  const navigate = useCallback((id: PageId, replace = false) => {
+    const destination = navigationItems.find((item) => item.id === id)
+    if (!destination) return
+    history[replace ? 'replaceState' : 'pushState'](null, '', destination.path)
+    setActive(id)
+    if (lenisRef.current) lenisRef.current.scrollTo(0, { immediate: true })
+    else window.scrollTo({ top: 0, behavior: 'auto' })
   }, [])
 
   useEffect(() => {
     if (!enabled) return
-    const targets = sectionIds.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[]
     let frame = 0
     const update = () => {
       frame = 0
       setScrolled(window.scrollY > 60)
-      const activationLine = window.innerHeight * 0.36
-      let current = targets[0]
-      for (const target of targets) {
-        if (target.getBoundingClientRect().top <= activationLine) current = target
-        else break
-      }
-      if (current && sectionIds.includes(current.id as SectionId)) setActive(current.id as SectionId)
     }
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(update)
@@ -57,13 +50,22 @@ export function usePageNavigation(enabled = true) {
     }
   }, [enabled])
 
+  const scrollToId = useCallback((id: string) => {
+    const target = document.getElementById(id)
+    if (!target) return
+    if (lenisRef.current) lenisRef.current.scrollTo(target, { offset: -70 })
+    else target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }, [])
+
   useEffect(() => {
     if (!enabled) return
-    const onPop = () => document.getElementById(location.hash.slice(1) || 'inicio')?.scrollIntoView()
+    const onPop = () => {
+      setActive(pageFromPathname(window.location.pathname))
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
     window.addEventListener('popstate', onPop)
-    if (location.hash) window.setTimeout(onPop, 100)
     return () => window.removeEventListener('popstate', onPop)
   }, [enabled])
 
-  return { active, scrolled, navigate }
+  return { active, scrolled, navigate, scrollToId }
 }
