@@ -53,7 +53,8 @@ export function usePageNavigation(enabled = true) {
   const scrollToId = useCallback((id: string) => {
     const target = document.getElementById(id)
     if (!target) return
-    if (lenisRef.current) lenisRef.current.scrollTo(target, { offset: -70 })
+    const offset = id === 'n5' ? 0 : -70
+    if (lenisRef.current) lenisRef.current.scrollTo(target, { offset })
     else target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }, [])
 

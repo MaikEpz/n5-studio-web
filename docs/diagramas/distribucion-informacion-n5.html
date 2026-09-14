@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Distribución de información · N5 Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&amp;family=Manrope:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --n5-paper: #ffffff;
+      --n5-ink: #000000;
+      --n5-accent: #670d8c;
+      --n5-muted: rgba(0, 0, 0, 0.64);
+      --n5-soft: rgba(0, 0, 0, 0.48);
+      --n5-rule: rgba(0, 0, 0, 0.18);
+      --n5-group-fill: rgba(0, 0, 0, 0.035);
+      --n5-accent-fill: rgba(103, 13, 140, 0.08);
+      --font-display: "Cormorant Garamond", Georgia, serif;
+      --font-interface: "Manrope", Arial, sans-serif;
+    }
+
+    html { background: var(--n5-paper); }
+
+    body {
+      margin: 0;
+      background: var(--n5-paper);
+      color: var(--n5-ink);
+      font-family: var(--font-interface);
+    }
+
+    .page {
+      width: 100%;
+      padding: 40px 0 28px;
+    }
+
+    .page-header,
+    .page-footer {
+      width: min(1280px, calc(100% - 48px));
+      margin-inline: auto;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--n5-accent);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(34px, 4vw, 56px);
+      font-weight: 500;
+      letter-spacing: -0.025em;
+      line-height: 0.96;
+    }
+
+    .intro {
+      max-width: 660px;
+      margin: 12px 0 24px;
+      color: var(--n5-muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .diagram-scroll {
+      width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scrollbar-color: var(--n5-accent) var(--n5-rule);
+    }
+
+    .diagram {
+      display: block;
+      width: max(100%, 1280px);
+      height: auto;
+      min-width: 1280px;
+    }
+
+    .page-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--n5-rule);
+      color: var(--n5-soft);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .content-map {
+      width: min(1280px, calc(100% - 48px));
+      margin: 24px auto 64px;
+    }
+
+    .content-map__header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      padding: 40px 0 32px;
+      border-top: 1px solid var(--n5-ink);
+    }
+
+    .content-map__header h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(32px, 4vw, 48px);
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .content-map__header p:last-child {
+      max-width: 560px;
+      margin: 0;
+      color: var(--n5-muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .content-section {
+      display: grid;
+      grid-template-columns: 200px minmax(0, 1fr);
+      gap: 40px;
+      padding: 40px 0 48px;
+      border-top: 1px solid var(--n5-rule);
+    }
+
+    .content-section__index {
+      position: sticky;
+      top: 24px;
+      align-self: start;
+    }
+
+    .content-section__index span {
+      display: block;
+      margin-bottom: 12px;
+      color: var(--n5-accent);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+    }
+
+    .content-section__index h3 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .content-section__body {
+      min-width: 0;
+    }
+
+    .content-section__body > h4,
+    .content-card h4,
+    .division-detail h4 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .content-section__body > p,
+    .content-card p,
+    .division-detail p,
+    .division-detail li {
+      margin: 0 0 12px;
+      color: var(--n5-muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .content-lead {
+      max-width: 900px;
+      margin: 0 0 28px !important;
+      color: var(--n5-ink) !important;
+      font-family: var(--font-display);
+      font-size: 24px !important;
+      line-height: 1.25 !important;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .content-grid--three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .content-card,
+    .division-detail {
+      padding: 20px;
+      border: 1px solid var(--n5-rule);
+      border-radius: 6px;
+    }
+
+    .content-card--wide {
+      grid-column: 1 / -1;
+    }
+
+    .content-card__label,
+    .division-detail__label {
+      margin: 0 0 12px !important;
+      color: var(--n5-accent) !important;
+      font-size: 9px !important;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .compact-list,
+    .number-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .compact-list li,
+    .number-list li {
+      margin: 0;
+      padding: 6px 10px;
+      border: 1px solid var(--n5-rule);
+      border-radius: 4px;
+      color: var(--n5-ink);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .number-list {
+      counter-reset: n5-step;
+    }
+
+    .number-list li {
+      counter-increment: n5-step;
+    }
+
+    .number-list li::before {
+      content: counter(n5-step, decimal-leading-zero) " ";
+      color: var(--n5-accent);
+      font-weight: 600;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .principle {
+      padding: 20px;
+      border-top: 1px solid var(--n5-ink);
+      background: var(--n5-group-fill);
+    }
+
+    .principle h4 {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .principle h4 span {
+      color: var(--n5-accent);
+      font-size: 10px;
+    }
+
+    .principle ul,
+    .division-detail ul {
+      margin: 12px 0 0;
+      padding-left: 18px;
+    }
+
+    .principle li {
+      margin-bottom: 6px;
+      color: var(--n5-muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .division-stack {
+      display: grid;
+      gap: 24px;
+    }
+
+    .division-detail {
+      display: grid;
+      grid-template-columns: 200px repeat(2, minmax(0, 1fr));
+      gap: 24px;
+      padding: 24px;
+    }
+
+    .division-detail__identity h4 {
+      font-family: var(--font-display);
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .division-detail__identity p:last-child {
+      color: var(--n5-ink);
+      font-weight: 600;
+    }
+
+    .manifesto-copy {
+      padding: 28px;
+      border: 1px solid var(--n5-accent);
+      background: var(--n5-accent-fill);
+    }
+
+    .manifesto-copy blockquote {
+      margin: 0 0 24px;
+      font-family: var(--font-display);
+      font-size: 30px;
+      line-height: 1.15;
+    }
+
+    .manifesto-copy p {
+      margin: 0 0 12px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .manifesto-copy strong {
+      color: var(--n5-accent);
+    }
+
+    .connector {
+      fill: none;
+      stroke: var(--n5-muted);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .node {
+      fill: var(--n5-paper);
+      stroke: var(--n5-ink);
+      stroke-width: 0.8;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .node--root {
+      fill: var(--n5-accent-fill);
+      stroke: var(--n5-accent);
+      stroke-width: 1.2;
+    }
+
+    .node--group {
+      fill: var(--n5-group-fill);
+      stroke-width: 1;
+    }
+
+    .node-kicker {
+      fill: var(--n5-soft);
+      font-family: var(--font-interface);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+    }
+
+    .node-title {
+      fill: var(--n5-ink);
+      font-family: var(--font-interface);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .root-title {
+      fill: var(--n5-accent);
+      font-family: var(--font-display);
+      font-size: 25px;
+      font-weight: 600;
+    }
+
+    .node-copy {
+      fill: var(--n5-muted);
+      font-family: var(--font-interface);
+      font-size: 11px;
+      font-weight: 400;
+    }
+
+    .legend-label {
+      fill: var(--n5-muted);
+      font-family: var(--font-interface);
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .legend-heading {
+      fill: var(--n5-soft);
+      font-family: var(--font-interface);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+    }
+
+    @media (max-width: 720px) {
+      .page { padding-top: 28px; }
+      .page-header, .page-footer { width: calc(100% - 32px); }
+      .diagram-scroll { padding-bottom: 8px; }
+      .page-footer { flex-direction: column; gap: 6px; }
+      .content-map { width: calc(100% - 32px); }
+      .content-map__header,
+      .content-section,
+      .content-grid,
+      .content-grid--three,
+      .principles,
+      .division-detail {
+        grid-template-columns: 1fr;
+      }
+      .content-map__header,
+      .content-section { gap: 24px; }
+      .content-section__index { position: static; }
+      .content-card--wide { grid-column: auto; }
+    }
+
+    @media print {
+      .page { padding: 0; }
+      .page-header, .page-footer { width: 1280px; }
+      .diagram-scroll { overflow: visible; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <p class="eyebrow">N5 Studio · Mapa editorial</p>
+      <h1>Cómo se reparte la información</h1>
+      <p class="intro">La narrativa institucional se organiza en cinco destinos públicos. Cada bloque agrupa las escenas y categorías que la audiencia encuentra al recorrer la web.</p>
+    </header>
+
+    <div class="diagram-scroll" role="region" aria-label="Diagrama desplazable horizontalmente" tabindex="0">
+      <svg class="diagram" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="n5-information-tree-title n5-information-tree-desc">
+        <title id="n5-information-tree-title">Distribución de la información institucional de N5 Studio</title>
+        <desc id="n5-information-tree-desc">Árbol editorial de tres niveles. N5 Studio conduce a la narrativa institucional, que se distribuye en Inicio, N5, Filosofía, Divisiones y ecosistema, y Manifiesto.</desc>
+
+        <defs>
+          <marker id="n5-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(0,0,0,0.64)"/></marker>
+          <marker id="n5-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#670d8c"/></marker>
+          <marker id="n5-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#000000"/></marker>
+        </defs>
+
+        <rect width="1280" height="720" fill="#ffffff"/>
+
+        <!-- Connectors: one trunk, one distribution bar, five independent drops. -->
+        <path class="connector" d="M640 144 V216"/>
+        <path class="connector" d="M640 280 V360 H160"/>
+        <path class="connector" d="M640 360 H1120"/>
+        <path class="connector" d="M160 360 V400"/>
+        <path class="connector" d="M400 360 V400"/>
+        <path class="connector" d="M640 360 V400"/>
+        <path class="connector" d="M880 360 V400"/>
+        <path class="connector" d="M1120 360 V400"/>
+
+        <!-- Level 1: institutional root. -->
+        <g aria-label="N5 Studio, raíz institucional">
+          <rect class="node node--root" x="520" y="80" width="240" height="64" rx="6"/>
+          <text class="root-title" x="640" y="120" text-anchor="middle">N5 Studio</text>
+        </g>
+
+        <!-- Level 2: narrative organizer. -->
+        <g aria-label="Narrativa institucional, agrupador de contenido público">
+          <rect class="node node--group" x="520" y="216" width="240" height="64" rx="6"/>
+          <text class="node-title" x="640" y="243" text-anchor="middle">Narrativa institucional</text>
+          <text class="node-copy" x="640" y="262" text-anchor="middle">Contenido público · español</text>
+        </g>
+
+        <!-- Level 3: five public navigation destinations. -->
+        <g aria-label="Inicio: hero, lema y propuesta principal">
+          <rect class="node" x="60" y="400" width="200" height="128" rx="6"/>
+          <text class="node-kicker" x="80" y="424">ESCENA 00</text>
+          <text class="node-title" x="80" y="452">Inicio</text>
+          <text class="node-copy" x="80" y="478">
+            <tspan x="80" dy="0">Hero · lema</tspan>
+            <tspan x="80" dy="18">Propuesta principal</tspan>
+          </text>
+        </g>
+
+        <g aria-label="N5: definición, propósito, tipos de valor y visión">
+          <rect class="node" x="300" y="400" width="200" height="128" rx="6"/>
+          <text class="node-kicker" x="320" y="424">ESCENAS 01–03</text>
+          <text class="node-title" x="320" y="452">N5</text>
+          <text class="node-copy" x="320" y="478">
+            <tspan x="320" dy="0">Definición · propósito</tspan>
+            <tspan x="320" dy="18">Tipos de valor · visión</tspan>
+          </text>
+        </g>
+
+        <g aria-label="Filosofía: estructura creativa, principios, formación, innovación, autonomía y principio operativo">
+          <rect class="node" x="540" y="400" width="200" height="128" rx="6"/>
+          <text class="node-kicker" x="560" y="424">ESCENAS 04–05</text>
+          <text class="node-title" x="560" y="452">Filosofía</text>
+          <text class="node-copy" x="560" y="478">
+            <tspan x="560" dy="0">Estructura · principios</tspan>
+            <tspan x="560" dy="18">Formación · innovación</tspan>
+            <tspan x="560" dy="18">Autonomía · operación</tspan>
+          </text>
+        </g>
+
+        <g aria-label="Divisiones y ecosistema: RRSS, Labs, Cine y transferencia de capacidades">
+          <rect class="node" x="780" y="400" width="200" height="128" rx="6"/>
+          <text class="node-kicker" x="800" y="424">ESCENAS 06–07</text>
+          <text class="node-title" x="800" y="452">Divisiones y ecosistema</text>
+          <text class="node-copy" x="800" y="478">
+            <tspan x="800" dy="0">RRSS · Labs · Cine</tspan>
+            <tspan x="800" dy="18">Transferencia de</tspan>
+            <tspan x="800" dy="18">capacidades</tspan>
+          </text>
+        </g>
+
+        <g aria-label="Manifiesto: declaraciones, lema final y cierre institucional">
+          <rect class="node" x="1020" y="400" width="200" height="128" rx="6"/>
+          <text class="node-kicker" x="1040" y="424">ESCENA 08</text>
+          <text class="node-title" x="1040" y="452">Manifiesto</text>
+          <text class="node-copy" x="1040" y="478">
+            <tspan x="1040" dy="0">Declaraciones · lema final</tspan>
+            <tspan x="1040" dy="18">Cierre institucional</tspan>
+          </text>
+        </g>
+
+        <!-- Legend. -->
+        <line x1="60" y1="620" x2="1220" y2="620" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>
+        <text class="legend-heading" x="60" y="652">LEYENDA</text>
+
+        <rect x="228" y="640" width="20" height="20" rx="4" fill="rgba(103,13,140,0.08)" stroke="#670d8c" stroke-width="1.2"/>
+        <text class="legend-label" x="260" y="654">Raíz institucional</text>
+
+        <rect x="476" y="640" width="20" height="20" rx="4" fill="rgba(0,0,0,0.035)" stroke="#000000" stroke-width="1"/>
+        <text class="legend-label" x="508" y="654">Agrupador narrativo</text>
+
+        <rect x="756" y="640" width="20" height="20" rx="4" fill="#ffffff" stroke="#000000" stroke-width="0.8"/>
+        <text class="legend-label" x="788" y="654">Secciones públicas</text>
+      </svg>
+    </div>
+
+    <section class="content-map" aria-labelledby="content-map-title">
+      <header class="content-map__header">
+        <div>
+          <p class="eyebrow">Inventario editorial ampliado</p>
+          <h2 id="content-map-title">El contenido detrás de cada nodo</h2>
+        </div>
+        <p>Este segundo nivel conserva el texto sustantivo de la web. El árbol superior explica dónde vive la información; los paneles siguientes muestran qué comunica cada destino.</p>
+      </header>
+
+      <article class="content-section" aria-labelledby="detail-inicio">
+        <header class="content-section__index">
+          <span>00 / 08</span>
+          <h3 id="detail-inicio">Inicio</h3>
+        </header>
+        <div class="content-section__body">
+          <p class="content-lead">“Transformamos ideas en experiencias que trascienden.”</p>
+          <div class="content-grid">
+            <div class="content-card">
+              <p class="content-card__label">Presentación</p>
+              <h4>N5 Studio</h4>
+              <p>Estudio creativo de Latinoamérica que integra narrativa, producción audiovisual, tecnología e innovación.</p>
+            </div>
+            <div class="content-card">
+              <p class="content-card__label">Promesa de navegación</p>
+              <h4>Tres unidades. Una visión.</h4>
+              <p>El hero conduce a conocer N5 y presenta el recorrido como el origen de una idea que se transforma en experiencia.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="content-section" aria-labelledby="detail-n5">
+        <header class="content-section__index">
+          <span>01–03 / 08</span>
+          <h3 id="detail-n5">N5</h3>
+        </header>
+        <div class="content-section__body">
+          <p class="content-lead">Un estudio, tres fuerzas conectadas por una misma filosofía: crear proyectos con identidad y valor.</p>
+          <div class="content-grid content-grid--three">
+            <div class="content-card content-card--wide">
+              <p class="content-card__label">01 — Qué es N5</p>
+              <p>N5 integra <strong>narrativa, producción audiovisual, tecnología e innovación</strong> para transformar ideas en experiencias.</p>
+              <p>No se limita a una sola disciplina. Sus tres unidades responden a necesidades diferentes, conectadas por una misma filosofía: crear proyectos con identidad y valor.</p>
+            </div>
+            <div class="content-card">
+              <p class="content-card__label">N5 RRSS</p>
+              <h4>Comunicación</h4>
+              <p>Comunicación, publicidad y producción audiovisual para marcas.</p>
+            </div>
+            <div class="content-card">
+              <p class="content-card__label">N5 Labs</p>
+              <h4>Innovación</h4>
+              <p>Innovación, experiencias inmersivas y desarrollo tecnológico.</p>
+            </div>
+            <div class="content-card">
+              <p class="content-card__label">N5 Cine</p>
+              <h4>Narrativa</h4>
+              <p>Creación y desarrollo cinematográfico.</p>
+            </div>
+            <div class="content-card content-card--wide">
+              <p class="content-card__label">02 — Nuestro propósito</p>
+              <h4>Historias, experiencias y soluciones creativas que aporten valor.</h4>
+              <p>Existimos para transformar ideas y aportar valor a personas, marcas y comunidades.</p>
+              <p>Un proyecto publicitario puede ayudar a comunicar mejor. Una experiencia tecnológica puede resolver una necesidad. Una película puede generar reflexión, emoción o memoria.</p>
+              <ul class="compact-list" aria-label="Tipos de valor">
+                <li>Comercial</li><li>Educativo</li><li>Técnico</li><li>Cultural</li><li>Artístico</li><li>Emocional</li><li>Social</li><li>Entretenimiento</li>
+              </ul>
+            </div>
+            <div class="content-card content-card--wide">
+              <p class="content-card__label">03 — Visión</p>
+              <h4>Construir un estudio creativo referente en Latinoamérica.</h4>
+              <p>Ser reconocido por la capacidad de integrar narrativa, producción audiovisual, tecnología e innovación.</p>
+              <p>Desarrollamos proyectos con altos estándares creativos y técnicos mediante equipos preparados y procesos sólidos. N5 debe producir proyectos extraordinarios sin depender permanentemente de una sola persona.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="content-section" aria-labelledby="detail-filosofia">
+        <header class="content-section__index">
+          <span>04–05 / 08</span>
+          <h3 id="detail-filosofia">Filosofía</h3>
+        </header>
+        <div class="content-section__body">
+          <p class="content-lead">La estructura no limita: libera el talento. Las mejores ideas alcanzan su potencial con procesos claros, personas preparadas y criterios compartidos.</p>
+          <div class="content-card">
+            <p class="content-card__label">Sistema creativo</p>
+            <p>Construimos equipos capaces de aportar su talento dentro de un sistema.</p>
+            <ol class="number-list">
+              <li>Procesos claros</li><li>Personas preparadas</li><li>Responsabilidades definidas</li><li>Comunicación efectiva</li><li>Criterios de calidad</li><li>Formación continua</li>
+            </ol>
+          </div>
+
+          <div class="principles" aria-label="Principios de N5">
+            <section class="principle">
+              <h4><span>01</span> Reputación</h4>
+              <p>La reputación es uno de los activos más importantes de N5. Cada proyecto representa lo que somos.</p>
+              <ul><li>Calidad</li><li>Cumplimiento</li><li>Comunicación clara</li><li>Transparencia</li><li>Responsabilidad sobre las entregas</li><li>Respeto hacia clientes y colaboradores</li></ul>
+            </section>
+            <section class="principle">
+              <h4><span>02</span> Calidad</h4>
+              <p>No buscamos únicamente que algo esté terminado. Debe cumplir un estándar creativo y técnico coherente con N5 y con el nivel del proyecto contratado.</p>
+              <p>La calidad debe ser consistente y progresivamente menos dependiente de una sola persona.</p>
+            </section>
+            <section class="principle">
+              <h4><span>03</span> Procesos que generan libertad</h4>
+              <p>Los procesos no existen para burocratizar. Reducen errores, evitan improvisaciones innecesarias y dejan espacio para las decisiones donde realmente aportamos valor.</p>
+              <p>Documentamos aquello que se repite. Cada proceso documentado fortalece la empresa.</p>
+            </section>
+            <section class="principle">
+              <h4><span>04</span> Formación constante</h4>
+              <p>N5 funciona también como una escuela práctica. Compartimos conocimiento técnico, creativo y profesional para desarrollar nuevas capacidades.</p>
+              <p>El objetivo no es crear dependencia hacia quien enseña. Es multiplicar conocimiento.</p>
+              <ol class="number-list"><li>Observar</li><li>Ejecutar acompañado</li><li>Ejecutar con supervisión</li><li>Trabajar con autonomía</li><li>Enseñar a otra persona</li></ol>
+            </section>
+            <section class="principle">
+              <h4><span>05</span> Aprendizaje con propósito</h4>
+              <p>Aprender dentro de N5 implica responsabilidad. El estudio brinda conocimiento, herramientas, experiencias reales y acompañamiento.</p>
+              <p>Cuando una persona desarrolla capacidad para producir resultados, puede asumir responsabilidades profesionales y oportunidades de trabajo remunerado. El conocimiento entregado debe valorarse y utilizarse responsablemente.</p>
+            </section>
+            <section class="principle">
+              <h4><span>06</span> Respeto por N5</h4>
+              <p>Buscamos respeto por lo que N5 representa: por lo aprendido, las experiencias compartidas, las oportunidades recibidas, el crecimiento profesional y la calidad de lo construido juntos.</p>
+              <p>Una persona puede desarrollar proyectos propios o continuar fuera de N5. Queremos una cultura donde ese crecimiento no destruya la confianza construida.</p>
+            </section>
+            <section class="principle">
+              <h4><span>07</span> Innovación</h4>
+              <p>La tecnología, la inteligencia artificial, las nuevas herramientas audiovisuales y las nuevas formas narrativas son parte natural de nuestra evolución.</p>
+              <p>No innovamos por utilizar tecnología nueva. Innovamos cuando una herramienta nos permite contar, producir o resolver algo mejor.</p>
+            </section>
+            <section class="principle">
+              <h4><span>08</span> Autonomía con criterio</h4>
+              <p>No buscamos personas que únicamente obedezcan instrucciones. Buscamos colaboradores que aprendan nuestros estándares y crezcan con criterio.</p>
+              <ul><li>Identificar problemas</li><li>Proponer soluciones</li><li>Tomar decisiones dentro de su responsabilidad</li><li>Mejorar procesos</li><li>Enseñar a otros</li></ul>
+            </section>
+          </div>
+
+          <div class="content-card" style="margin-top: 24px;">
+            <p class="content-card__label">05 — Principio operativo central</p>
+            <h4>El director no debe realizar una tarea únicamente porque puede hacerla mejor.</h4>
+            <p>Debe intervenir donde su criterio aporte un valor que el sistema todavía no pueda replicar. Transferir tareas ejecutivas permite que Dirección se concentre en:</p>
+            <ul class="compact-list"><li>Visión</li><li>Dirección creativa</li><li>Narrativa</li><li>Desarrollo de proyectos</li><li>Relaciones estratégicas</li><li>Decisiones importantes</li><li>Nuevas oportunidades</li></ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="content-section" aria-labelledby="detail-divisiones">
+        <header class="content-section__index">
+          <span>06–07 / 08</span>
+          <h3 id="detail-divisiones">Divisiones y ecosistema</h3>
+        </header>
+        <div class="content-section__body">
+          <p class="content-lead">Tres maneras de hacer que una idea viva. Especialidades diferentes, conectadas por una inteligencia compartida.</p>
+          <div class="division-stack">
+            <section class="division-detail">
+              <div class="division-detail__identity"><p class="division-detail__label">01 — Comunicación</p><h4>N5 RRSS</h4><p>Comunicación, publicidad y producción audiovisual.</p></div>
+              <div><h4>Definición y misión</h4><p>La división enfocada en comunicación, publicidad y producción audiovisual para marcas, empresas y organizaciones. No se limita a producir contenido: convierte objetivos comerciales y comunicacionales en piezas estratégicas y visualmente sólidas.</p><p>Ayudar a empresas y marcas a crecer mediante estrategias y producciones audiovisuales que comuniquen con claridad, generen confianza y produzcan resultados.</p><h4>Objetivo</h4><p>Convertirse en un aliado creativo para organizaciones que buscan diferenciarse mediante contenido audiovisual de alta calidad acompañado por procesos profesionales.</p></div>
+              <div><h4>Indicadores importantes</h4><ul><li>Clientes recurrentes</li><li>Entregas puntuales</li><li>Rentabilidad</li><li>Calidad consistente</li><li>Satisfacción del cliente</li><li>Recomendaciones</li><li>Capacidad del equipo</li><li>Reducción del trabajo operativo dependiente de Dirección</li></ul></div>
+            </section>
+
+            <section class="division-detail">
+              <div class="division-detail__identity"><p class="division-detail__label">02 — Innovación</p><h4>N5 Labs</h4><p>Innovación y desarrollo tecnológico.</p></div>
+              <div><h4>Definición y capacidades</h4><p>La división de innovación y desarrollo tecnológico. Investiga, prototipa y construye nuevas formas de interacción.</p><ul class="compact-list"><li>Realidad virtual</li><li>Experiencias inmersivas</li><li>Aplicaciones web y móviles</li><li>Software</li><li>Inteligencia artificial</li><li>Tecnologías interactivas</li><li>Investigación y prototipado</li></ul><h4 style="margin-top: 20px;">Misión</h4><p>Investigar, desarrollar e implementar experiencias tecnológicas que combinen creatividad, software, inteligencia artificial y narrativa para crear nuevas formas de interacción.</p><h4>Objetivo</h4><p>Construir una unidad capaz de desarrollar y comercializar productos y experiencias tecnológicas innovadoras, posicionando a N5 como referente en experiencias inmersivas y nuevas tecnologías.</p></div>
+              <div><h4>Indicadores importantes</h4><ul><li>Productos desarrollados</li><li>Prototipos comercializables</li><li>Proyectos tecnológicos contratados</li><li>Facturación por innovación</li><li>Propiedad intelectual</li><li>Investigación y desarrollo</li><li>Capacidad técnica del equipo</li></ul></div>
+            </section>
+
+            <section class="division-detail">
+              <div class="division-detail__identity"><p class="division-detail__label">03 — Narrativa</p><h4>N5 Cine</h4><p>Creación cinematográfica y propiedad intelectual audiovisual.</p></div>
+              <div><h4>Definición y desarrollo</h4><p>La división dedicada a la creación cinematográfica y al desarrollo de propiedad intelectual audiovisual. Es el espacio donde N5 construye una voz artística propia.</p><ul class="compact-list"><li>Ejercicios cinematográficos</li><li>Sketches</li><li>Piezas narrativas</li><li>Cortometrajes</li><li>Documentales</li><li>Largometrajes</li><li>Proyectos de autor</li></ul><h4 style="margin-top: 20px;">Misión</h4><p>Crear obras cinematográficas con identidad narrativa propia que emocionen, cuestionen e inspiren, desarrollando historias capaces de trascender el tiempo.</p><h4>Objetivo</h4><p>Desarrollar progresivamente una práctica cinematográfica propia y posicionar a N5 y a sus directores por su capacidad narrativa y cinematográfica.</p></div>
+              <div><h4>Indicadores importantes</h4><ul><li>Obras terminadas</li><li>Propiedad intelectual desarrollada</li><li>Portafolio cinematográfico</li><li>Selecciones en festivales</li><li>Distribución</li><li>Premios y reconocimientos</li><li>Colaboraciones</li><li>Desarrollo de audiencia</li><li>Posicionamiento de dirección</li></ul></div>
+            </section>
+
+            <section class="content-card">
+              <p class="content-card__label">07 — El ecosistema creativo</p>
+              <h4>Diferentes capacidades. Una inteligencia compartida.</h4>
+              <div class="content-grid content-grid--three">
+                <div><h4>RRSS — Capacidad audiovisual</h4><p>Genera experiencia comercial, flujo de proyectos y capacidad de producción.</p></div>
+                <div><h4>Labs — Innovación tecnológica</h4><p>Desarrolla herramientas, productos y nuevas posibilidades de interacción.</p></div>
+                <div><h4>Cine — Voz narrativa</h4><p>Construye dirección, propiedad intelectual y una sensibilidad cinematográfica propia.</p></div>
+              </div>
+              <p style="margin-top: 20px;">El conocimiento de una división fortalece a las demás. La IA atraviesa las tres; el cine eleva la publicidad; la tecnología abre nuevas formas de narrativa y producción.</p>
+            </section>
+          </div>
+        </div>
+      </article>
+
+      <article class="content-section" aria-labelledby="detail-manifiesto">
+        <header class="content-section__index">
+          <span>08 / 08</span>
+          <h3 id="detail-manifiesto">Manifiesto</h3>
+        </header>
+        <div class="content-section__body">
+          <div class="manifesto-copy">
+            <blockquote>No buscamos ser la empresa que más proyectos produce. Buscamos construir una organización capaz de producir <strong>grandes proyectos</strong> de manera consistente.</blockquote>
+            <p>01 — Creemos en las personas.</p>
+            <p>02 — Creemos en la formación.</p>
+            <p>03 — Creemos en los procesos.</p>
+            <p>04 — Creemos en el criterio.</p>
+            <p>05 — Creemos en la creatividad acompañada de estructura.</p>
+            <p style="margin-top: 24px;">Queremos que el conocimiento se transforme en capacidad, la capacidad en oportunidades y las oportunidades en proyectos que valga la pena recordar.</p>
+            <p><strong>Transformamos ideas en experiencias que trascienden.</strong></p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <footer class="page-footer">
+      <span>Documento independiente · 7 nodos · 3 niveles</span>
+      <span>N5 Studio · Distribución editorial</span>
+    </footer>
+  </main>
+</body>
+</html>

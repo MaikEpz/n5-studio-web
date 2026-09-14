@@ -38,10 +38,10 @@ export function DivisionPanel({ divisions }: { divisions: readonly Division[] })
         })
 
       gsap.fromTo(copyStack,
-        { yPercent: 16, clipPath: 'inset(24% 0 0 0)' },
+        { xPercent: 12, clipPath: 'inset(0 0 0 12%)' },
         {
-          yPercent: 0,
-          clipPath: 'inset(0% 0 0 0)',
+          xPercent: 0,
+          clipPath: 'inset(0 0 0 0%)',
           ease: 'none',
           scrollTrigger: { trigger: copyStack, start: 'top 98%', end: 'top 28%', scrub: 0.8 },
         })

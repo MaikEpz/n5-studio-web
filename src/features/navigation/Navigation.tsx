@@ -33,10 +33,8 @@ export function Navigation({ active, scrolled, onNavigate }: NavigationProps) {
     onNavigate(id)
   }
 
-  const onLightBackground = active === 'filosofia'
-
   return (
-    <header className={`site-header ${scrolled || open ? 'is-scrolled' : ''} ${onLightBackground ? 'on-light' : ''}`}>
+    <header className={`site-header ${scrolled || open ? 'is-scrolled' : ''}`}>
       <a className="brand" href="/" onClick={(e) => { e.preventDefault(); go('n5') }} aria-label="N5 Studio, ir al inicio">
         <BrandLogo />
       </a>
