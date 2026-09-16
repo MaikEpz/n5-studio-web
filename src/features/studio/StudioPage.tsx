@@ -3,6 +3,8 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Navigation } from '@features/navigation/Navigation'
 import { DivisionPanel } from '@features/divisions/DivisionPanel'
+import { Clients, ContactCta, FeaturedWork } from '@features/home/HomeSections'
+import { RrssPage } from '@features/rrss/RrssPage'
 import { CinematicOverlay } from '../../components/CinematicOverlay'
 import { ScrollScene } from '@shared/ui/ScrollScene'
 import { BrandLogo } from '@shared/ui/BrandLogo'
@@ -13,6 +15,14 @@ import { LoadingScreen } from '@shared/ui/LoadingScreen'
 import { dependencies } from '@app/dependencies'
 
 gsap.registerPlugin(ScrollTrigger)
+
+// Secciones definidas en la arquitectura web de Miro, pendientes de diseño.
+const plannedPages = {
+  work: { eyebrow: 'Work', title: 'Proyectos', sections: ['Todos los proyectos', 'Commercial / RRSS', 'Film / Cine', 'Experiences / Labs'] },
+  cine: { eyebrow: 'N5 Cine', title: 'Cine', sections: ['Filosofía', 'Documentales', 'Cortometrajes', 'Largometrajes', 'Cine para redes', 'En desarrollo'] },
+  labs: { eyebrow: 'N5 Labs', title: 'Experiencias', sections: ['Qué hacemos', 'VR / MR', '3D', 'Apps', 'Interactive', 'Selected Work'] },
+  contacto: { eyebrow: 'Contacto', title: 'Iniciar proyecto', sections: ['Tipo de producción', 'Descripción del proyecto', 'Iniciar proyecto'] },
+} as const
 
 export function StudioPage() {
   const root = useRef<HTMLDivElement>(null)
@@ -68,24 +78,14 @@ export function StudioPage() {
           }, 0.02)
           .to('.hero-title .line:nth-child(2)', {
             xPercent: -120,
-            yPercent: 0,
-            rotateY: 15,
-            scale: 0.85,
-            opacity: 0,
-            filter: 'blur(10px)',
-            duration: 0.40,
-            ease: 'power2.in',
-          }, 0.04)
-          .to('.hero-title .line:nth-child(3)', {
-            xPercent: 120,
             yPercent: 10,
-            rotateY: -15,
+            rotateY: 15,
             scale: 0.85,
             opacity: 0,
             filter: 'blur(10px)',
             duration: 0.42,
             ease: 'power2.in',
-          }, 0.06)
+          }, 0.05)
           .fromTo('.hero-white-fade', {
             opacity: 0,
           }, {
@@ -103,84 +103,58 @@ export function StudioPage() {
       const mainSections = gsap.utils.toArray<HTMLElement>('#contenido > section, #contenido > div > section')
       const middleSections = mainSections.length > 2 ? mainSections.slice(1, -1) : []
 
-      middleSections.forEach((section) => {
-        const leftElements = section.querySelectorAll<HTMLElement>('.reveal-left')
-        const rightElements = section.querySelectorAll<HTMLElement>('.reveal-right')
-        const otherElements = Array.from(section.querySelectorAll<HTMLElement>('.reveal')).filter(
-          (el) => !el.classList.contains('reveal-left') && !el.classList.contains('reveal-right'),
-        )
-        const sceneBadge = section.querySelector<HTMLElement>('.scroll-scene')
-        const isMobile = window.matchMedia('(max-width: 900px)').matches
-        const xOffset = isMobile ? 90 : 190
-        const yOffset = isMobile ? 25 : 40
-        const rotY = isMobile ? 0 : 10
+      const isMobile = window.matchMedia('(max-width: 900px)').matches
+      const xOffset = isMobile ? 90 : 190
+      const yOffset = isMobile ? 25 : 40
+      const rotY = isMobile ? 0 : 10
 
-        const isFirstAfterHero = section.id === 'n5'
-        const sectionTimeline = gsap.timeline({
-          scrollTrigger: {
-            trigger: section,
-            start: isFirstAfterHero ? 'top 96%' : 'top 72%',
-            end: 'bottom 28%',
-            scrub: 0.5,
-          },
+      // Punto de reposo (ver CLAUDE.md): cada sección tiene un tramo de scroll en el que se ve completa
+      // y ningún elemento está entrando ni saliendo. Las entradas terminan antes y las salidas empiezan después.
+      const vh = innerHeight
+      const minPhase = vh * 0.25
+      const plans = middleSections.map((section) => {
+        const rect = section.getBoundingClientRect()
+        const top = rect.top + scrollY
+        const overflow = section.offsetHeight - vh
+        const restStart = top + Math.min(0, overflow)
+        const restEnd = top + Math.max(0, overflow)
+        const fits = overflow <= 0
+        const elements = [...section.querySelectorAll<HTMLElement>('.reveal')].map((element) => {
+          const box = element.getBoundingClientRect()
+          const elTop = box.top + scrollY
+          const elBottom = box.bottom + scrollY
+          const enterEnd = fits ? Math.min(restStart, elTop - vh * 0.6) : elTop - vh * 0.6
+          const exitStart = fits ? Math.max(restEnd, elBottom - vh * 0.4) : elBottom - vh * 0.4
+          return {
+            element,
+            enterStart: Math.min(elTop - vh, enterEnd - minPhase),
+            enterEnd,
+            exitStart,
+            exitEnd: Math.max(elBottom, exitStart + minPhase),
+          }
+        })
+        return { section, restStart, restEnd, elements }
+      })
+
+      plans.forEach(({ section, restStart, restEnd, elements }) => {
+        elements.forEach(({ element, enterStart, enterEnd, exitStart, exitEnd }) => {
+          const side = element.classList.contains('reveal-left') ? -1 : element.classList.contains('reveal-right') ? 1 : 0
+          const hidden = (direction: 1 | -1) => side === 0
+            ? { x: 0, y: direction * yOffset * 1.5, z: 0, rotateY: 0, opacity: 0, filter: 'blur(8px)' }
+            : { x: side * xOffset, y: direction * yOffset, z: 90, rotateY: -side * rotY, opacity: 0, filter: 'blur(8px)' }
+          // La línea de tiempo usa píxeles de scroll como unidad de duración.
+          gsap.timeline({ scrollTrigger: { trigger: section, start: enterStart, end: exitEnd, scrub: 0.5 } })
+            .fromTo(element, hidden(1), { x: 0, y: 0, z: 0, rotateY: 0, opacity: 1, filter: 'blur(0px)', ease: 'power1.out', duration: enterEnd - enterStart }, 0)
+            .to(element, { ...hidden(-1), ease: 'power1.in', duration: exitEnd - exitStart }, exitStart - enterStart)
         })
 
-        // Phase 1: Entrance from sides when scrolling down into section (or exit when scrolling up into hero)
-        if (leftElements.length > 0) {
-          sectionTimeline.fromTo(leftElements,
-            { x: -xOffset, y: yOffset, z: 90, rotateY: rotY, opacity: 0, filter: 'blur(10px)' },
-            { x: 0, y: 0, z: 0, rotateY: 0, opacity: 1, filter: 'blur(0px)', ease: 'power1.out', duration: 0.38, stagger: 0.04 },
-            0,
-          )
-        }
-        if (rightElements.length > 0) {
-          sectionTimeline.fromTo(rightElements,
-            { x: xOffset, y: yOffset, z: 90, rotateY: -rotY, opacity: 0, filter: 'blur(10px)' },
-            { x: 0, y: 0, z: 0, rotateY: 0, opacity: 1, filter: 'blur(0px)', ease: 'power1.out', duration: 0.38 },
-            0,
-          )
-        }
-        if (otherElements.length > 0) {
-          sectionTimeline.fromTo(otherElements,
-            { y: yOffset * 1.5, opacity: 0, filter: 'blur(10px)' },
-            { y: 0, opacity: 1, filter: 'blur(0px)', ease: 'power1.out', duration: 0.38 },
-            0,
-          )
-        }
+        const sceneBadge = section.querySelector<HTMLElement>('.scroll-scene')
         if (sceneBadge) {
-          sectionTimeline.fromTo(sceneBadge,
-            { opacity: 0, scale: 1.12 },
-            { opacity: 0.5, scale: 1, ease: 'power1.out', duration: 0.3 },
-            0,
-          )
-        }
-
-        // Phase 2: Hold (0.38 -> 0.62) - centered and fully readable
-
-        // Phase 3: Exit to sides when continuing down (or entrance from sides when scrolling up from below)
-        if (leftElements.length > 0) {
-          sectionTimeline.to(leftElements,
-            { x: -xOffset, y: -yOffset, z: 90, rotateY: rotY, opacity: 0, filter: 'blur(10px)', ease: 'power1.in', duration: 0.38, stagger: 0.03 },
-            0.62,
-          )
-        }
-        if (rightElements.length > 0) {
-          sectionTimeline.to(rightElements,
-            { x: xOffset, y: -yOffset, z: 90, rotateY: -rotY, opacity: 0, filter: 'blur(10px)', ease: 'power1.in', duration: 0.38 },
-            0.62,
-          )
-        }
-        if (otherElements.length > 0) {
-          sectionTimeline.to(otherElements,
-            { y: -yOffset * 1.5, opacity: 0, filter: 'blur(10px)', ease: 'power1.in', duration: 0.38 },
-            0.62,
-          )
-        }
-        if (sceneBadge) {
-          sectionTimeline.to(sceneBadge,
-            { opacity: 0, scale: 0.92, ease: 'power1.in', duration: 0.28 },
-            0.66,
-          )
+          const start = restStart - minPhase
+          const end = restEnd + minPhase
+          gsap.timeline({ scrollTrigger: { trigger: section, start, end, scrub: 0.5 } })
+            .fromTo(sceneBadge, { opacity: 0, scale: 1.12 }, { opacity: 0.5, scale: 1, ease: 'power1.out', duration: minPhase }, 0)
+            .to(sceneBadge, { opacity: 0, scale: 0.92, ease: 'power1.in', duration: minPhase }, restEnd - start)
         }
       })
 
@@ -207,7 +181,7 @@ export function StudioPage() {
             scrollTrigger: {
               trigger: element,
               start: 'top 98%',
-              end: 'top 68%',
+              end: 'clamp(top 68%)',
               scrub: 0.55,
             },
           },
@@ -231,9 +205,17 @@ export function StudioPage() {
         )
         if (image) gsap.fromTo(image, { scale: 1.22, yPercent: -4 }, { scale: 1, yPercent: 4, ease: 'none', scrollTrigger: { trigger: panel, start: 'top bottom', end: 'bottom top', scrub: .2 } })
       })
-      if (root.current?.querySelector('#n5')) gsap.fromTo('.cinematic-reticle', { scale: 1.8, opacity: 0 }, { scale: .72, opacity: .28, ease: 'none', scrollTrigger: { trigger: '#n5', start: 'top bottom', end: 'bottom top', scrub: .25 } })
-      if (root.current?.querySelector('#labs')) gsap.fromTo('.cinematic-beam', { xPercent: -130, opacity: 0 }, { xPercent: 145, opacity: .3, ease: 'none', scrollTrigger: { trigger: '#labs', start: 'top bottom', end: 'bottom top', scrub: .2 } })
-      if (root.current?.querySelector('#cine')) gsap.fromTo('.cinematic-film-rail', { xPercent: 110, rotate: -8, opacity: 0 }, { xPercent: -120, rotate: 6, opacity: .34, ease: 'none', scrollTrigger: { trigger: '#cine', start: 'top bottom', endTrigger: '.ecosystem', end: 'top center', scrub: .2 } })
+      // Los efectos de fondo son fijos: deben aparecer y desaparecer dentro de su sección para no quedar sobre las siguientes.
+      if (root.current?.querySelector('#n5')) {
+        gsap.timeline({ scrollTrigger: { trigger: '#n5', start: 'top bottom', end: 'bottom top', scrub: .25 } })
+          .fromTo('.cinematic-reticle', { scale: 1.8, opacity: 0 }, { scale: 1, opacity: .28, ease: 'none', duration: .5 }, 0)
+          .to('.cinematic-reticle', { scale: .6, opacity: 0, ease: 'none', duration: .5 }, .5)
+      }
+      if (root.current?.querySelector('#divisiones')) {
+        gsap.timeline({ scrollTrigger: { trigger: '#divisiones', start: 'top bottom', end: 'bottom top', scrub: .2 } })
+          .fromTo('.cinematic-film-rail', { xPercent: 110, rotate: -8, opacity: 0 }, { xPercent: -5, rotate: -1, opacity: .34, ease: 'none', duration: .5 }, 0)
+          .to('.cinematic-film-rail', { xPercent: -120, rotate: 6, opacity: 0, ease: 'none', duration: .5 }, .5)
+      }
       gsap.utils.toArray<HTMLElement>('.scroll-scene').forEach((scene) => {
         if (middleSections.some((sec) => sec.contains(scene))) return
         gsap.fromTo(scene, { opacity: 0, scale: 1.12 }, { opacity: .5, scale: 1, ease: 'none', scrollTrigger: { trigger: scene.parentElement, start: 'top bottom', end: 'top 30%', scrub: .25 } })
@@ -245,15 +227,16 @@ export function StudioPage() {
   if (contentState.status === 'idle' || contentState.status === 'loading') return <LoadingScreen />
   if (contentState.status === 'error') return <div className="app-status" role="alert">No fue posible cargar el contenido de N5.</div>
   const { creativeSystem, directionFocus, divisions, manifesto, principles, valueTypes } = contentState.data
+  const rrssDivision = divisions.find((division) => division.id === 'rrss')
 
   return (
     <div ref={root}>
       <Navigation active={active} scrolled={scrolled} onNavigate={navigate} />
       <CinematicOverlay />
       <main id="contenido">
-        {active === 'n5' && <>
+        {active === 'home' && <>
           <section id="inicio" className="hero section-dark" aria-labelledby="hero-title">
-            <ScrollScene code="00 / 08" label="Origen de una idea" />
+            <ScrollScene label="Origen de una idea" />
             <div className="hero-sticky">
               <div className="hero-image">
                 <HeroVideoSequence triggerSelector="#inicio" />
@@ -264,9 +247,8 @@ export function StudioPage() {
               <div className="hero-white-fade" aria-hidden="true" />
               <div className="hero-content page-shell">
                 <h1 id="hero-title" className="hero-title">
-                  <span className="line"><span>Transformamos ideas</span></span>
-                  <span className="line italic"><span>en experiencias</span></span>
-                  <span className="line right"><span>que trascienden.</span></span>
+                  <span className="line inset-left"><span>Ideas que</span></span>
+                  <span className="line inset-right"><span>transcienden</span></span>
                 </h1>
                 <div className="hero-foot">
                   <p>Narrativa, producción audiovisual,<br />tecnología e innovación.</p>
@@ -298,9 +280,9 @@ export function StudioPage() {
           </section>
 
           <section id="n5" className="identity section-light" aria-labelledby="identity-title">
-            <ScrollScene code="01 / 08" label="Identidad del estudio" />
+            <ScrollScene label="Identidad del estudio" />
             <div className="page-shell">
-              <div className="section-intro reveal reveal-left"><p className="eyebrow">01 — Qué es N5</p><p className="section-index">Identidad</p></div>
+              <div className="section-intro reveal reveal-left"><p className="eyebrow">Qué es N5</p><p className="section-index">Manifiesto</p></div>
               <div className="identity-grid">
                 <h2 id="identity-title" className="display reveal reveal-left">Un estudio.<br /><em>Tres fuerzas.</em></h2>
                 <div className="lead-copy reveal reveal-right">
@@ -312,17 +294,36 @@ export function StudioPage() {
           </section>
 
           <section id="divisiones" className="divisions section-light" aria-labelledby="divisions-title">
-            <ScrollScene code="06 / 08" label="Tres especialidades" />
+            <ScrollScene label="Tres especialidades" />
             <div className="division-list"><DivisionPanel divisions={divisions} /></div>
           </section>
 
+          <FeaturedWork onNavigate={navigate} />
+          <Clients />
+          <ContactCta onNavigate={navigate} />
+
         </>}
 
-        {active === 'filosofia' && <>
+        {active === 'rrss' && rrssDivision && <RrssPage division={rrssDivision} onNavigate={navigate} />}
+
+        {active in plannedPages && (() => {
+          const page = plannedPages[active as keyof typeof plannedPages]
+          return (
+            <section key={active} className="planned-page section-dark route-page" aria-labelledby="planned-title">
+              <div className="page-shell">
+                <div className="section-intro reveal reveal-left"><p className="eyebrow">{page.eyebrow}</p><p className="section-index">En construcción</p></div>
+                <h2 id="planned-title" className="display reveal reveal-left">{page.title}</h2>
+                <ol className="planned-list reveal reveal-right">{page.sections.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, '0')}</span>{item}</li>)}</ol>
+              </div>
+            </section>
+          )
+        })()}
+
+        {active === 'studio' && <>
           <section id="filosofia" className="philosophy section-dark route-page" aria-labelledby="philosophy-title">
-          <ScrollScene code="02 / 08" label="Propósito y visión" />
+          <ScrollScene label="Propósito y visión" />
           <div className="page-shell">
-            <div className="section-intro reveal reveal-left"><p className="eyebrow">02 — Nuestro propósito</p><p className="section-index">Historias, experiencias y valor</p></div>
+            <div className="section-intro reveal reveal-left"><p className="eyebrow">Nuestro propósito</p><p className="section-index">Historias, experiencias y valor</p></div>
             <div className="purpose-compact">
               <div className="purpose-compact-head reveal reveal-left">
                 <h3>Historias, experiencias y soluciones creativas que aporten valor.</h3>
@@ -337,11 +338,11 @@ export function StudioPage() {
 
           <div className="page-shell">
             <div className="vision">
-              <p className="eyebrow reveal reveal-left">03 — Visión</p>
+              <p className="eyebrow reveal reveal-left">Visión</p>
               <blockquote className="reveal reveal-left">Construir un estudio creativo referente en Latinoamérica por su capacidad de integrar narrativa, producción audiovisual, tecnología e innovación.</blockquote>
               <p className="reveal reveal-right">Desarrollamos proyectos con altos estándares creativos y técnicos mediante equipos preparados y procesos sólidos. N5 debe producir proyectos extraordinarios sin depender permanentemente de una sola persona.</p>
             </div>
-            <div className="section-intro reveal reveal-left"><p className="eyebrow">04 — Filosofía N5</p><p className="section-index">La creatividad necesita estructura</p></div>
+            <div className="section-intro reveal reveal-left"><p className="eyebrow">Filosofía N5</p><p className="section-index">La creatividad necesita estructura</p></div>
             <div className="philosophy-head">
               <h2 id="philosophy-title" className="display reveal reveal-left">La estructura no limita.<br /><em>Libera el talento.</em></h2>
               <p className="reveal reveal-right">Las mejores ideas alcanzan su potencial cuando hay procesos claros, personas preparadas y criterios compartidos. Construimos equipos capaces de aportar su talento dentro de un sistema.</p>
@@ -360,7 +361,7 @@ export function StudioPage() {
             </div>
             <div className="operating-principle">
               <div className="reveal reveal-left">
-                <p className="eyebrow">05 — Principio operativo central</p>
+                <p className="eyebrow">Principio operativo central</p>
                 <h3>El director no debe realizar una tarea únicamente porque puede hacerla mejor.</h3>
                 <p>Debe intervenir donde su criterio aporte un valor que el sistema todavía no pueda replicar. Transferir tareas ejecutivas permite que Dirección se concentre en:</p>
               </div>
@@ -370,10 +371,10 @@ export function StudioPage() {
           </section>
 
           <section className="ecosystem section-dark" aria-labelledby="ecosystem-title">
-            <ScrollScene code="07 / 08" label="Inteligencia compartida" />
+            <ScrollScene label="Inteligencia compartida" />
             <div className="ecosystem-orbit one" aria-hidden="true" /><div className="ecosystem-orbit two" aria-hidden="true" />
             <div className="page-shell ecosystem-inner">
-              <p className="eyebrow reveal reveal-left">07 — El ecosistema creativo</p>
+              <p className="eyebrow eyebrow-accent reveal reveal-left">El ecosistema creativo</p>
               <h2 id="ecosystem-title" className="display reveal reveal-left">Diferentes capacidades.<br /><em>Una inteligencia compartida.</em></h2>
               <div className="ecosystem-map">
                 <article className="reveal reveal-left"><span>RRSS</span><h3>Capacidad audiovisual</h3><p>Genera experiencia comercial, flujo de proyectos y capacidad de producción.</p></article>
@@ -385,8 +386,8 @@ export function StudioPage() {
           </section>
         </>}
 
-        {active === 'academia' && <section id="academia" className="academy philosophy section-dark route-page" aria-labelledby="academy-title">
-          <ScrollScene code="01 / 01" label="Formación y crecimiento" />
+        {active === 'studio' && <section id="academia" className="academy philosophy section-dark route-page" aria-labelledby="academy-title">
+          <ScrollScene label="Formación y crecimiento" />
           <div className="page-shell">
             <div className="section-intro reveal reveal-left"><p className="eyebrow">Academia N5</p><p className="section-index">Formación continua</p></div>
             <div className="philosophy-head">
@@ -405,10 +406,10 @@ export function StudioPage() {
           </div>
         </section>}
 
-        {active === 'manifiesto' && <section id="manifiesto" className="manifesto section-brand route-page" aria-labelledby="manifesto-title">
-          <ScrollScene code="08 / 08" label="Lo que permanece" />
+        {active === 'studio' && <section id="manifiesto" className="manifesto section-dark route-page" aria-labelledby="manifesto-title">
+          <ScrollScene label="Lo que permanece" />
           <div className="page-shell manifesto-inner">
-            <p className="eyebrow reveal reveal-left">08 — Manifiesto N5</p>
+            <p className="eyebrow eyebrow-accent reveal reveal-left">Manifiesto N5</p>
             <h2 id="manifesto-title" className="manifesto-lead reveal reveal-left">No buscamos ser la empresa que más proyectos produce.</h2>
             <p className="manifesto-answer reveal reveal-right">Buscamos construir una organización capaz de producir <em>grandes proyectos</em> de manera consistente.</p>
             <div className="manifesto-lines">{manifesto.map((line, index) => <p className={`reveal ${index % 2 === 0 ? 'reveal-left' : 'reveal-right'}`} key={line}><span>0{index + 1}</span>{line}</p>)}</div>
@@ -417,7 +418,7 @@ export function StudioPage() {
               <h3 className="reveal reveal-left">Transformamos ideas en experiencias que trascienden.</h3>
             </div>
           </div>
-          <footer className="footer page-shell"><a href="/" onClick={(e) => { e.preventDefault(); navigate('n5') }} className="footer-brand" aria-label="N5 Studio, volver al inicio"><BrandLogo full /></a><p>Estudio creativo<br />Latinoamérica</p><button onClick={() => navigate('n5')}>Volver al inicio ↑</button><p className="copyright">© {new Date().getFullYear()} N5 Studio</p></footer>
+          <footer className="footer page-shell"><a href="/" onClick={(e) => { e.preventDefault(); navigate('home') }} className="footer-brand" aria-label="N5 Studio, volver al inicio"><BrandLogo full /></a><p>Estudio creativo<br />Latinoamérica</p><button onClick={() => navigate('home')}>Volver al inicio ↑</button><p className="copyright">© {new Date().getFullYear()} N5 Studio</p></footer>
         </section>}
       </main>
     </div>

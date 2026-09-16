@@ -35,12 +35,12 @@ export function Navigation({ active, scrolled, onNavigate }: NavigationProps) {
 
   return (
     <header className={`site-header ${scrolled || open ? 'is-scrolled' : ''}`}>
-      <a className="brand" href="/" onClick={(e) => { e.preventDefault(); go('n5') }} aria-label="N5 Studio, ir al inicio">
+      <a className="brand" href="/" onClick={(e) => { e.preventDefault(); go('home') }} aria-label="N5 Studio, ir al inicio">
         <BrandLogo />
       </a>
       <nav className="desktop-nav" aria-label="Navegación principal">
-        {navigationItems.map(({ id, label, path }) => (
-          <a key={id} href={path} className={active === id ? 'active' : ''} aria-current={active === id ? 'page' : undefined} onClick={(e) => { e.preventDefault(); go(id) }}>{label}</a>
+        {navigationItems.map(({ id, label, path, cta }) => (
+          <a key={id} href={path} className={[cta ? 'nav-cta' : '', active === id ? 'active' : ''].join(' ').trim()} aria-current={active === id ? 'page' : undefined} onClick={(e) => { e.preventDefault(); go(id) }}>{label}</a>
         ))}
       </nav>
       <button ref={buttonRef} className="menu-toggle" type="button" aria-expanded={open} aria-controls="mobile-menu" aria-label={open ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setOpen(!open)}>

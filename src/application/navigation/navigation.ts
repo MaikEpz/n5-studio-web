@@ -1,15 +1,26 @@
-export const pageIds = ['n5', 'filosofia', 'academia', 'manifiesto'] as const
+export const pageIds = ['home', 'work', 'rrss', 'cine', 'labs', 'studio', 'contacto'] as const
 export type PageId = typeof pageIds[number]
 
-export const navigationItems: readonly { id: PageId; label: string; path: string }[] = [
-  { id: 'n5', label: 'N5', path: '/' },
-  { id: 'filosofia', label: 'Filosofía', path: '/filosofia' },
-  { id: 'academia', label: 'Academia', path: '/academia' },
-  { id: 'manifiesto', label: 'Manifiesto', path: '/manifiesto' },
+export type NavigationItem = { id: PageId; label: string; path: string; cta?: boolean }
+
+export const navigationItems: readonly NavigationItem[] = [
+  { id: 'home', label: 'Home', path: '/' },
+  { id: 'work', label: 'Work', path: '/work' },
+  { id: 'rrss', label: 'N5 RRSS', path: '/rrss' },
+  { id: 'cine', label: 'N5 Cine', path: '/cine' },
+  { id: 'labs', label: 'N5 Labs', path: '/labs' },
+  { id: 'studio', label: 'Studio', path: '/studio' },
+  { id: 'contacto', label: 'Contacto', path: '/contacto', cta: true },
 ]
+
+const legacyPaths: Record<string, PageId> = {
+  '/filosofia': 'studio',
+  '/academia': 'studio',
+  '/manifiesto': 'studio',
+  '/divisiones': 'home',
+}
 
 export function pageFromPathname(pathname: string): PageId {
   const normalized = pathname.replace(/\/+$/, '') || '/'
-  if (normalized === '/divisiones') return 'academia'
-  return navigationItems.find(({ path }) => path === normalized)?.id ?? 'n5'
+  return legacyPaths[normalized] ?? navigationItems.find(({ path }) => path === normalized)?.id ?? 'home'
 }

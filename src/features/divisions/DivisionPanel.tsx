@@ -25,8 +25,7 @@ export function DivisionPanel({ divisions }: { divisions: readonly Division[] })
       const copyStack = root.current?.querySelector<HTMLElement>('.division-copy-stack')
       const stage = root.current?.querySelector<HTMLElement>('.division-stage')
       const selectedButton = root.current?.querySelector<HTMLButtonElement>('.division-selector button.active')
-      const selectedMark = selectedButton?.querySelector<HTMLSpanElement>('span')
-      if (!selector || !copyStack || !stage || !selectedButton || !selectedMark) return
+      if (!selector || !copyStack || !stage || !selectedButton) return
 
       gsap.fromTo(selector,
         { xPercent: -18, clipPath: 'inset(0 18% 0 0)' },
@@ -65,7 +64,7 @@ export function DivisionPanel({ divisions }: { divisions: readonly Division[] })
         .fromTo('.stage-grid',
           { xPercent: 18, opacity: 0 },
           { xPercent: 0, opacity: 0.08, duration: 0.4, ease: 'none' }, 0.48)
-        .fromTo('.stage-label, .image-index',
+        .fromTo('.stage-label',
           { y: 32, opacity: 0 },
           { y: 0, opacity: 1, stagger: 0.08, duration: 0.28, ease: 'none' }, 0.7)
 
@@ -85,9 +84,6 @@ export function DivisionPanel({ divisions }: { divisions: readonly Division[] })
         .fromTo(selectedButton,
           { x: -58, clipPath: 'inset(0 100% 0 0)' },
           { x: 0, clipPath: 'inset(0 0% 0 0)', duration: 0.72, ease: 'none' }, 0.16)
-        .fromTo(selectedMark,
-          { scale: 0, rotate: -120 },
-          { scale: 1, rotate: 0, duration: 0.24, ease: 'none' }, 0.57)
         .fromTo('.division-selector-title span',
           { x: -88, opacity: 0 },
           { x: 0, opacity: 1, duration: 0.46, ease: 'none' }, 0.34)
@@ -191,12 +187,11 @@ export function DivisionPanel({ divisions }: { divisions: readonly Division[] })
           <nav>
             {divisions.map((division, index) => (
               <button key={division.id} type="button" onClick={() => selectDivision(index)} className={index === activeIndex ? 'active' : undefined} aria-pressed={index === activeIndex} disabled={animating}>
-                <span aria-hidden="true">✦</span>{division.name}
+                {division.name}
               </button>
             ))}
           </nav>
           <h2 id="divisions-title" className="division-selector-title"><span>Tres maneras de</span><em>hacer que una<br />idea viva.</em></h2>
-          <small>{active.number} / 03</small>
         </aside>
 
         <div className="division-copy-stack">
@@ -211,7 +206,6 @@ export function DivisionPanel({ divisions }: { divisions: readonly Division[] })
           </div>
           <div className="stage-grid" aria-hidden="true" />
           <p className="stage-label">N5 Studio — {active.label}</p>
-          <span className="image-index">{active.number} / 03</span>
         </div>
       </div>
     </article>
