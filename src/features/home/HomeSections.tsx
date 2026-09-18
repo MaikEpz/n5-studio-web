@@ -19,7 +19,7 @@ const clients: readonly { name: string; logo?: string; darken?: boolean }[] = [
   { name: 'Imagine Creative Studio', logo: '/images/clientes/imagine.png', darken: true },
   { name: 'Museo Alberto Mena Caamaño', logo: '/images/clientes/museo-mena-caamano.svg', darken: true },
   { name: 'Colineal', logo: '/images/clientes/colineal.svg' },
-  { name: 'Cliente 8' },
+  { name: 'GAD Parroquial de Baños', logo: '/images/clientes/gad-banos.png', darken: true },
 ]
 
 export function FeaturedWork({ onNavigate }: HomeSectionProps) {

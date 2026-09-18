@@ -13,6 +13,7 @@ import { useStudioContent } from '@features/studio/useStudioContent'
 import { HeroVideoSequence } from '@features/studio/HeroVideoSequence'
 import { LoadingScreen } from '@shared/ui/LoadingScreen'
 import { dependencies } from '@app/dependencies'
+import { ContactPage } from '@features/contact/ContactPage'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -21,7 +22,6 @@ const plannedPages = {
   work: { eyebrow: 'Work', title: 'Proyectos', sections: ['Todos los proyectos', 'Commercial / RRSS', 'Film / Cine', 'Experiences / Labs'] },
   cine: { eyebrow: 'N5 Cine', title: 'Cine', sections: ['Filosofía', 'Documentales', 'Cortometrajes', 'Largometrajes', 'Cine para redes', 'En desarrollo'] },
   labs: { eyebrow: 'N5 Labs', title: 'Experiencias', sections: ['Qué hacemos', 'VR / MR', '3D', 'Apps', 'Interactive', 'Selected Work'] },
-  contacto: { eyebrow: 'Contacto', title: 'Iniciar proyecto', sections: ['Tipo de producción', 'Descripción del proyecto', 'Iniciar proyecto'] },
 } as const
 
 export function StudioPage() {
@@ -211,11 +211,7 @@ export function StudioPage() {
           .fromTo('.cinematic-reticle', { scale: 1.8, opacity: 0 }, { scale: 1, opacity: .28, ease: 'none', duration: .5 }, 0)
           .to('.cinematic-reticle', { scale: .6, opacity: 0, ease: 'none', duration: .5 }, .5)
       }
-      if (root.current?.querySelector('#divisiones')) {
-        gsap.timeline({ scrollTrigger: { trigger: '#divisiones', start: 'top bottom', end: 'bottom top', scrub: .2 } })
-          .fromTo('.cinematic-film-rail', { xPercent: 110, rotate: -8, opacity: 0 }, { xPercent: -5, rotate: -1, opacity: .34, ease: 'none', duration: .5 }, 0)
-          .to('.cinematic-film-rail', { xPercent: -120, rotate: 6, opacity: 0, ease: 'none', duration: .5 }, .5)
-      }
+
       gsap.utils.toArray<HTMLElement>('.scroll-scene').forEach((scene) => {
         if (middleSections.some((sec) => sec.contains(scene))) return
         gsap.fromTo(scene, { opacity: 0, scale: 1.12 }, { opacity: .5, scale: 1, ease: 'none', scrollTrigger: { trigger: scene.parentElement, start: 'top bottom', end: 'top 30%', scrub: .25 } })
@@ -293,9 +289,9 @@ export function StudioPage() {
             </div>
           </section>
 
-          <section id="divisiones" className="divisions section-light" aria-labelledby="divisions-title">
+          <section id="divisiones" className="divisions section-dark" aria-labelledby="divisions-title">
             <ScrollScene label="Tres especialidades" />
-            <div className="division-list"><DivisionPanel divisions={divisions} /></div>
+            <div className="division-list"><DivisionPanel divisions={divisions} onNavigate={navigate} /></div>
           </section>
 
           <FeaturedWork onNavigate={navigate} />
@@ -305,6 +301,8 @@ export function StudioPage() {
         </>}
 
         {active === 'rrss' && rrssDivision && <RrssPage division={rrssDivision} onNavigate={navigate} />}
+
+        {active === 'contacto' && <ContactPage onNavigate={navigate} />}
 
         {active in plannedPages && (() => {
           const page = plannedPages[active as keyof typeof plannedPages]
