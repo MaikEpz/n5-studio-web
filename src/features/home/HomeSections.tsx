@@ -1,5 +1,11 @@
+import { useLayoutEffect, useRef } from 'react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import type { PageId } from '@application/navigation/navigation'
 import { ScrollScene } from '@shared/ui/ScrollScene'
+import { SiteFooter } from '@shared/ui/SiteFooter'
+
+gsap.registerPlugin(ScrollTrigger)
 
 type HomeSectionProps = { onNavigate: (id: PageId) => void }
 
@@ -25,7 +31,7 @@ const clients: readonly { name: string; logo?: string; darken?: boolean }[] = [
 export function FeaturedWork({ onNavigate }: HomeSectionProps) {
   return (
     <section id="featured-work" className="featured-work section-dark" aria-labelledby="featured-work-title">
-      <ScrollScene label="Trabajo seleccionado" />
+      <ScrollScene />
       <div className="page-shell">
         <div className="section-intro reveal reveal-left"><p className="eyebrow">Featured Work</p><p className="section-index">Proyectos destacados</p></div>
         <div className="featured-head">
@@ -46,9 +52,9 @@ export function FeaturedWork({ onNavigate }: HomeSectionProps) {
   )
 }
 
-export function Clients() {
+export function Clients({ footer = false, theme = 'light' }: { footer?: boolean; theme?: 'light' | 'dark' }) {
   return (
-    <section id="clientes" className="clients section-light" aria-labelledby="clients-title">
+    <section id="clientes" className={`clients section-${theme}${footer ? ' has-footer' : ''}`} aria-labelledby="clients-title">
       <div className="page-shell">
         <div className="section-intro reveal reveal-left"><p className="eyebrow">Clientes</p><p className="section-index">Quienes confían en N5</p></div>
         <h2 id="clients-title" className="clients-title reveal reveal-left">Marcas, personas y comunidades<br /><em>con las que construimos.</em></h2>
@@ -60,18 +66,61 @@ export function Clients() {
           ))}
         </ul>
       </div>
+      {footer && <SiteFooter />}
     </section>
   )
 }
 
 export function ContactCta({ onNavigate }: HomeSectionProps) {
+  const root = useRef<HTMLElement>(null)
+
+  // Entrada con scroll: termina cuando la sección llena la pantalla (su punto de reposo, ver CLAUDE.md).
+  useLayoutEffect(() => {
+    const section = root.current
+    if (!section || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const isMobile = window.matchMedia('(max-width: 900px)').matches
+    const side = isMobile ? 90 : 190
+    const rotY = isMobile ? 0 : 10
+    const context = gsap.context(() => {
+      const rings = gsap.utils.toArray<SVGCircleElement>('.cta-ring circle')
+      rings.forEach((ring) => {
+        const length = ring.getTotalLength()
+        gsap.set(ring, { strokeDasharray: length, strokeDashoffset: length })
+      })
+      gsap.timeline({
+        defaults: { ease: 'power2.out' },
+        scrollTrigger: { trigger: section, start: 'top 85%', end: 'clamp(top top)', scrub: 0.6 },
+      })
+        // Entrada lateral, como el resto del sitio: izquierda y derecha alternadas, con desenfoque.
+        .fromTo('.contact-cta .eyebrow', { x: -side, opacity: 0, filter: 'blur(8px)' }, { x: 0, opacity: 1, filter: 'blur(0px)', duration: 0.35 }, 0)
+        .fromTo('.cta-line:nth-child(1)', { x: -side, z: 90, rotateY: rotY, opacity: 0, filter: 'blur(10px)' }, { x: 0, z: 0, rotateY: 0, opacity: 1, filter: 'blur(0px)', duration: 0.55 }, 0.05)
+        .fromTo('.cta-line:nth-child(2)', { x: side, z: 90, rotateY: -rotY, opacity: 0, filter: 'blur(10px)' }, { x: 0, z: 0, rotateY: 0, opacity: 1, filter: 'blur(0px)', duration: 0.55 }, 0.15)
+        .fromTo('.cta-support .cta-button', { x: -side, opacity: 0, filter: 'blur(8px)' }, { x: 0, opacity: 1, filter: 'blur(0px)', duration: 0.4 }, 0.45)
+        .to(rings, { strokeDashoffset: 0, duration: 0.8, stagger: 0.1, ease: 'power1.inOut' }, 0)
+        .fromTo('.cta-ring', { rotate: -70, scale: 0.9 }, { rotate: 0, scale: 1, duration: 1, ease: 'none' }, 0)
+        .fromTo('.site-footer', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0.7)
+    }, section)
+    return () => context.revert()
+  }, [])
+
   return (
-    <section id="cta-contacto" className="contact-cta section-dark" aria-labelledby="contact-cta-title">
+    <section id="cta-contacto" ref={root} className="contact-cta section-dark" aria-labelledby="contact-cta-title">
+      <svg className="cta-ring" viewBox="0 0 400 400" aria-hidden="true">
+        <circle cx="200" cy="200" r="196" />
+        <circle cx="200" cy="200" r="150" />
+        <circle className="cta-ring-accent" cx="200" cy="200" r="104" />
+      </svg>
       <div className="page-shell contact-cta-inner">
-        <p className="eyebrow eyebrow-accent reveal reveal-left">Contacto</p>
-        <h2 id="contact-cta-title" className="display reveal reveal-left">¿Tienes una idea?<br /><em>Hagámosla trascender.</em></h2>
-        <a href="/contacto" className="cta-button reveal reveal-right" onClick={(e) => { e.preventDefault(); onNavigate('contacto') }}>Iniciar proyecto</a>
+        <p className="eyebrow eyebrow-accent">Contacto</p>
+        <h2 id="contact-cta-title" className="display contact-cta-title">
+          <span className="cta-line"><span>¿Tienes una idea?</span></span>
+          <span className="cta-line"><em>Hagámosla trascender.</em></span>
+        </h2>
+        <div className="cta-support">
+          <a href="/contacto" className="cta-button" onClick={(e) => { e.preventDefault(); onNavigate('contacto') }}>Iniciar proyecto</a>
+        </div>
       </div>
+      <SiteFooter />
     </section>
   )
 }

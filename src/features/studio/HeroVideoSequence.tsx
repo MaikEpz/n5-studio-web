@@ -129,12 +129,38 @@ export function HeroVideoSequence({
       animFrameIdRef.current = requestAnimationFrame(render)
     }
 
-    const setFrame = (frameIndex: number) => {
-      const clamped = Math.min(TOTAL_FRAMES - 1, Math.max(0, frameIndex))
-      if (clamped !== currentFrameRef.current) {
-        currentFrameRef.current = clamped
-        queueRender()
+    // Reproducción fluida: el scroll solo fija el fotograma objetivo y un bucle de animación
+    // avanza hacia él pasando por todos los fotogramas intermedios, con una velocidad máxima.
+    // Con scroll rápido el video "se pone al día" reproduciéndose en vez de saltar.
+    let targetFrame = 0
+    let playhead = 0
+    let playbackId: number | null = null
+    const MAX_FRAMES_PER_TICK = 1.2 // ≈ 72 fps de reproducción máxima a 60 Hz
+    const EASING = 0.2
+
+    const tick = () => {
+      playbackId = null
+      if (isDisposed) return
+      const distance = targetFrame - playhead
+      if (Math.abs(distance) < 0.01) {
+        playhead = targetFrame
+      } else {
+        const eased = distance * EASING
+        const minStep = Math.min(Math.abs(distance), 0.12) * Math.sign(distance)
+        const step = Math.abs(eased) < Math.abs(minStep) ? minStep : eased
+        playhead += Math.max(-MAX_FRAMES_PER_TICK, Math.min(MAX_FRAMES_PER_TICK, step))
       }
+      const frame = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(playhead)))
+      if (frame !== currentFrameRef.current) {
+        currentFrameRef.current = frame
+        render()
+      }
+      if (playhead !== targetFrame) playbackId = requestAnimationFrame(tick)
+    }
+
+    const setTargetFrame = (frame: number) => {
+      targetFrame = Math.min(TOTAL_FRAMES - 1, Math.max(0, frame))
+      if (playbackId === null) playbackId = requestAnimationFrame(tick)
     }
 
     // Carga y decodificación en hilo secundario mediante img.decode() para eliminar jank
@@ -185,47 +211,20 @@ export function HeroVideoSequence({
     }, { rootMargin: '100px' })
     intersectionObserver.observe(canvas)
 
-    // Mecanismo 1: GSAP Tween con ScrollTrigger scrub
+    // Un solo mecanismo: el progreso exacto de la sección marca el fotograma objetivo.
+    // El suavizado lo hace el bucle de reproducción, no GSAP.
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    let tween: gsap.core.Tween | null = null
-
-    if (!reduceMotion) {
-      const frameState = { frame: 0 }
-      tween = gsap.to(frameState, {
-        frame: TOTAL_FRAMES - 1,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: triggerSelector,
-          start: 'top top',
-          end: 'bottom bottom',
-          scrub: true,
-          onUpdate: (self) => {
-            const nextFrame = Math.round(self.progress * (TOTAL_FRAMES - 1))
-            setFrame(nextFrame)
-          },
-        },
-        onUpdate: () => {
-          const nextFrame = Math.round(frameState.frame)
-          setFrame(nextFrame)
-        },
-      })
+    const scrollTrigger = reduceMotion ? null : ScrollTrigger.create({
+      trigger: triggerSelector,
+      start: 'top top',
+      end: 'bottom bottom',
+      onUpdate: (self) => setTargetFrame(self.progress * (TOTAL_FRAMES - 1)),
+    })
+    // Si la página se abre ya desplazada, se muestra directamente el fotograma de esa posición.
+    if (scrollTrigger) {
+      targetFrame = playhead = scrollTrigger.progress * (TOTAL_FRAMES - 1)
+      currentFrameRef.current = Math.round(playhead)
     }
-
-    // Mecanismo 2: Listener nativo pasivo de scroll
-    const handleNativeScroll = () => {
-      if (reduceMotion || !isVisibleRef.current) return
-      const trigger = document.querySelector(triggerSelector) as HTMLElement | null
-      if (!trigger) return
-      const rect = trigger.getBoundingClientRect()
-      const maxScroll = trigger.offsetHeight - window.innerHeight
-      if (maxScroll > 0) {
-        const progress = Math.min(1, Math.max(0, -rect.top / maxScroll))
-        const nextFrame = Math.round(progress * (TOTAL_FRAMES - 1))
-        setFrame(nextFrame)
-      }
-    }
-
-    window.addEventListener('scroll', handleNativeScroll, { passive: true })
 
     queueRender()
 
@@ -236,11 +235,8 @@ export function HeroVideoSequence({
       }
       resizeObserver.disconnect()
       intersectionObserver.disconnect()
-      window.removeEventListener('scroll', handleNativeScroll)
-      if (tween) {
-        tween.scrollTrigger?.kill()
-        tween.kill()
-      }
+      if (playbackId !== null) cancelAnimationFrame(playbackId)
+      scrollTrigger?.kill()
     }
   }, [triggerSelector])
 

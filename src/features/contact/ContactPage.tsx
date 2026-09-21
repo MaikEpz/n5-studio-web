@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import type { PageId } from '@application/navigation/navigation'
 import { ScrollScene } from '@shared/ui/ScrollScene'
+import { SiteFooter } from '@shared/ui/SiteFooter'
 
 export type ContactPageProps = {
   onNavigate?: (id: PageId) => void
@@ -44,6 +45,7 @@ export function ContactPage({ onNavigate, initialDivision = 'rrss' }: ContactPag
   const [status, setStatus] = useState<'idle' | 'sending' | 'success'>('idle')
   const [error, setError] = useState('')
 
+  const pageRef = useRef<HTMLElement>(null)
   const tabsBarRef = useRef<HTMLDivElement>(null)
   const indicatorRef = useRef<HTMLSpanElement>(null)
   const tagsRowRef = useRef<HTMLDivElement>(null)
@@ -53,6 +55,22 @@ export function ContactPage({ onNavigate, initialDivision = 'rrss' }: ContactPag
 
   const activeDivision = DIVISIONS.find((d) => d.id === division) ?? DIVISIONS[0]
   const displayedDivisionData = DIVISIONS.find((d) => d.id === displayedDivision) ?? DIVISIONS[0]
+
+  // Entrada al cargar: fondo, título, pestañas, etiquetas, campos y botones aparecen en secuencia.
+  useLayoutEffect(() => {
+    if (!pageRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline({ defaults: { ease: 'power3.out' } })
+      timeline
+        .fromTo('.contact-bg-container', { opacity: 0 }, { opacity: 1, duration: 1.4, ease: 'power1.out' }, 0)
+        .fromTo('.contact-minimal-title', { y: 42, opacity: 0, filter: 'blur(8px)' }, { y: 0, opacity: 1, filter: 'blur(0px)', duration: 0.9 }, 0.1)
+        .fromTo('.contact-division-bar', { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, 0.3)
+        .fromTo('.contact-line-field', { clipPath: 'inset(0 100% 0 0)', opacity: 0 }, { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: 0.7, stagger: 0.09, ease: 'power2.inOut' }, 0.62)
+        .fromTo('.contact-dual-actions > *', { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, stagger: 0.08 }, 0.95)
+        .set('.contact-line-field', { clearProps: 'clipPath' })
+    }, pageRef)
+    return () => context.revert()
+  }, [])
 
   // Slide tab indicator smoothly with GSAP
   useLayoutEffect(() => {
@@ -206,7 +224,7 @@ export function ContactPage({ onNavigate, initialDivision = 'rrss' }: ContactPag
   )}`
 
   return (
-    <section className="contact-page section-dark route-page" aria-labelledby="contact-title">
+    <section ref={pageRef} className="contact-page section-dark route-page" aria-labelledby="contact-title">
       {/* Dynamic Atmospheric Background Images per Division */}
       <div className="contact-bg-container" aria-hidden="true">
         {DIVISIONS.map(({ id, bgImage, label }) => (
@@ -221,7 +239,7 @@ export function ContactPage({ onNavigate, initialDivision = 'rrss' }: ContactPag
         <div className="contact-bg-vignette" />
       </div>
 
-      <ScrollScene label="Contacto" />
+      <ScrollScene />
 
       <div className="page-shell contact-shell">
         {status === 'success' ? (
@@ -254,7 +272,7 @@ export function ContactPage({ onNavigate, initialDivision = 'rrss' }: ContactPag
           </div>
         ) : (
           <div className="contact-centered-layout">
-            <div className="contact-centered-head reveal">
+            <div className="contact-centered-head">
               <h1 id="contact-title" className="display contact-minimal-title">
                 Hablemos de<br />
                 <em>tu idea.</em>
@@ -262,7 +280,7 @@ export function ContactPage({ onNavigate, initialDivision = 'rrss' }: ContactPag
             </div>
 
             {/* Streamlined Minimalist Form with Dual Actions */}
-            <form onSubmit={handleSubmit} className="contact-minimal-form reveal" noValidate>
+            <form onSubmit={handleSubmit} className="contact-minimal-form" noValidate>
               {/* 3-Division minimal tabs with sliding indicator */}
               <div ref={tabsBarRef} className="contact-division-bar" role="tablist" aria-label="Seleccionar división">
                 <span ref={indicatorRef} className="contact-tab-slider" aria-hidden="true" />
@@ -364,6 +382,7 @@ export function ContactPage({ onNavigate, initialDivision = 'rrss' }: ContactPag
           </div>
         )}
       </div>
+      <SiteFooter />
     </section>
   )
 }

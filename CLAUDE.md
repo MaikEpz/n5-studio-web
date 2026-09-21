@@ -38,6 +38,16 @@ Toda sección debe tener un **punto de reposo**: un tramo de scroll en el que se
   - en móvil, las secciones pueden ser más altas que la pantalla.
 - **Verificación:** medir en 1920×1080 y 1366×768 que la sección no supere la altura de la pantalla y que, en su punto de reposo, todos sus `.reveal` estén con opacidad 1 y `blur(0px)`.
 
+## Regla de estilo de páginas (obligatoria)
+
+- **Referencia:** las páginas N5 RRSS y Work. El estilo es editorial y tipográfico, minimalista.
+  - Cada sección lleva etiqueta de sección, título y texto breve.
+  - Se usan rejillas de líneas finas: columnas (`process-steps`) y listas (`services-list`).
+  - Las imágenes solo aparecen en las tarjetas de proyecto (`featured-work`) y en el Case Study, donde la imagen es el propio proyecto.
+  - Nada de fotos de fondo, objetos decorativos ni etiquetas en forma de píldora.
+- **Variedad sobria:** una sección no repite la estructura de la anterior (portada, columnas, lista, tarjetas) y los fondos se alternan entre claro y oscuro.
+- **Páginas de división:** se construyen con los bloques de `src/features/division-pages/DivisionSections.tsx` (`DivisionIntro`, `ColumnsSection`, `WorkShowcase`), que reutilizan los estilos de RRSS.
+
 ## Otras convenciones de contenido
 
 - Sin numeración visible en las secciones: nada de "01 —" en etiquetas, "00 / 08" ni contadores "01 / 03".

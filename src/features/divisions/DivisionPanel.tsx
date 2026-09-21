@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import type { PageId } from '@application/navigation/navigation'
 import type { Division } from '@domain/studio/models'
 import { N5ModelCanvas } from './N5ModelCanvas'
+import { DIVISION_SCROLL_LENGTH, DIVISION_TEXT_PHASE, DIVISION_TRANSITIONS } from './divisionPhases'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -26,7 +27,7 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
       const pinTrigger = ScrollTrigger.create({
         trigger: root.current,
         start: 'top top',
-        end: '+=280%',
+        end: DIVISION_SCROLL_LENGTH,
         pin: pinWrapperRef.current,
         pinSpacing: true,
         scrub: reduceMotion ? false : 0.8,
@@ -35,15 +36,8 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
         onUpdate: (self) => {
           const p = self.progress
           setScrollProgress(p)
-          let idx = 0
-          if (p >= 0.72) {
-            idx = 2
-          } else if (p >= 0.38) {
-            idx = 1
-          } else {
-            idx = 0
-          }
-          setActiveIdx(idx)
+          // Activa la división cuyo cambio ya pasó la mitad.
+          setActiveIdx(DIVISION_TRANSITIONS.filter(({ start, end }) => p >= (start + end) / 2).length)
         },
       })
 
@@ -55,6 +49,12 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
 
     return () => context.revert()
   }, [])
+
+  // Orden de la escena según la arquitectura de Miro: RRSS → Cine → Labs.
+  const ordered = (['rrss', 'cine', 'labs'] as const)
+    .map((id) => divisions.find((division) => division.id === id))
+    .filter((division): division is Division => Boolean(division))
+  const shortName = (division: Division) => division.name.replace('N5 ', '')
 
   // Calculate opacity and transform for each division block based on scrollProgress
   // Uses the same lateral entrance/exit pattern (translateX, rotateY, z) as the rest of the site
@@ -71,86 +71,19 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
     // Smooth Hermite easing curve for natural entrance and exit
     const ease = (t: number) => t * t * (3 - 2 * t)
 
-    let opacity = 0
-    let factor = 0 // 0: resting in place, 1: fully hidden on its side
-    let blur = 0
-    let pointerEvents: 'auto' | 'none' = 'none'
-
-    // Division 0 (RRSS, Left): 0.0 to 0.42
-    if (index === 0) {
-      if (scrollProgress <= 0.3) {
-        opacity = 1
-        factor = 0
-        blur = 0
-        pointerEvents = 'auto'
-      } else if (scrollProgress <= 0.42) {
-        // Exiting toward the left
-        const f = ease((scrollProgress - 0.3) / 0.12)
-        opacity = 1 - f
-        factor = f
-        blur = 8 * f
-        pointerEvents = f < 0.5 ? 'auto' : 'none'
-      } else {
-        opacity = 0
-        factor = 1
-        pointerEvents = 'none'
-      }
+    // Entrada: final del cambio anterior. Salida: inicio del cambio siguiente. Entre ambas, reposo.
+    const enter = index > 0 ? DIVISION_TRANSITIONS[index - 1] : null
+    const exit = index < DIVISION_TRANSITIONS.length ? DIVISION_TRANSITIONS[index] : null
+    let hidden = 0 // 0: en su sitio, 1: oculta a su lado
+    if (enter && scrollProgress < enter.end) {
+      hidden = scrollProgress <= enter.end - DIVISION_TEXT_PHASE ? 1 : 1 - ease((scrollProgress - (enter.end - DIVISION_TEXT_PHASE)) / DIVISION_TEXT_PHASE)
+    } else if (exit && scrollProgress > exit.start) {
+      hidden = scrollProgress >= exit.start + DIVISION_TEXT_PHASE ? 1 : ease((scrollProgress - exit.start) / DIVISION_TEXT_PHASE)
     }
-    // Division 1 (Cine, Right): 0.32 to 0.76
-    else if (index === 1) {
-      if (scrollProgress < 0.32) {
-        opacity = 0
-        factor = 1
-        blur = 8
-        pointerEvents = 'none'
-      } else if (scrollProgress <= 0.44) {
-        // Entering from the right
-        const f = ease((scrollProgress - 0.32) / 0.12)
-        opacity = f
-        factor = 1 - f
-        blur = 8 * (1 - f)
-        pointerEvents = f > 0.5 ? 'auto' : 'none'
-      } else if (scrollProgress <= 0.64) {
-        // In resting position
-        opacity = 1
-        factor = 0
-        blur = 0
-        pointerEvents = 'auto'
-      } else if (scrollProgress <= 0.76) {
-        // Exiting toward the right
-        const f = ease((scrollProgress - 0.64) / 0.12)
-        opacity = 1 - f
-        factor = f
-        blur = 8 * f
-        pointerEvents = f < 0.5 ? 'auto' : 'none'
-      } else {
-        opacity = 0
-        factor = 1
-        pointerEvents = 'none'
-      }
-    }
-    // Division 2 (Labs, Left): 0.66 to 1.0
-    else if (index === 2) {
-      if (scrollProgress < 0.66) {
-        opacity = 0
-        factor = 1
-        blur = 8
-        pointerEvents = 'none'
-      } else if (scrollProgress <= 0.78) {
-        // Entering from the left
-        const f = ease((scrollProgress - 0.66) / 0.12)
-        opacity = f
-        factor = 1 - f
-        blur = 8 * (1 - f)
-        pointerEvents = f > 0.5 ? 'auto' : 'none'
-      } else {
-        // In resting position
-        opacity = 1
-        factor = 0
-        blur = 0
-        pointerEvents = 'auto'
-      }
-    }
+    const opacity = 1 - hidden
+    const factor = hidden
+    const blur = 8 * hidden
+    const pointerEvents: 'auto' | 'none' = hidden < 0.5 ? 'auto' : 'none'
 
     const x = side * xDist * factor
     const rotY = -side * rotDeg * factor
@@ -190,64 +123,64 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
           <div className="division-slots-grid">
             {/* Left Content Area (Division 0 and Division 2) */}
             <div className="division-slot division-slot-left">
-              {divisions[0] && (
+              {ordered[0] && (
                 <div
                   className="division-content-card division-card-0 reveal-left"
                   style={getDivisionStyle(0)}
                   aria-hidden={activeIdx !== 0}
                 >
-                  <p className="eyebrow division-card-eyebrow">N5 / {divisions[0].label}</p>
+                  <p className="eyebrow division-card-eyebrow">N5 / {ordered[0].label}</p>
                   <h3 className="display division-card-title">
-                    N5 <em>RRSS</em>
+                    N5 <em>{shortName(ordered[0])}</em>
                   </h3>
                   <div className="lead-copy division-intro">
-                    {divisions[0].intro.map((p) => (
+                    {ordered[0].intro.map((p) => (
                       <p key={p}>{p}</p>
                     ))}
                   </div>
                   <div className="division-action-row">
                     {onNavigate && (
                       <a
-                        href={`/${divisions[0].id}`}
+                        href={`/${ordered[0].id}`}
                         className="text-link"
                         onClick={(e) => {
                           e.preventDefault()
-                          onNavigate(divisions[0].id as PageId)
+                          onNavigate(ordered[0].id as PageId)
                         }}
                       >
-                        Explorar {divisions[0].name} →
+                        Explorar {ordered[0].name} →
                       </a>
                     )}
                   </div>
                 </div>
               )}
 
-              {divisions[2] && (
+              {ordered[2] && (
                 <div
                   className="division-content-card division-card-2 reveal-left"
                   style={getDivisionStyle(2)}
                   aria-hidden={activeIdx !== 2}
                 >
-                  <p className="eyebrow division-card-eyebrow">N5 / {divisions[2].label}</p>
+                  <p className="eyebrow division-card-eyebrow">N5 / {ordered[2].label}</p>
                   <h3 className="display division-card-title">
-                    N5 <em>Labs</em>
+                    N5 <em>{shortName(ordered[2])}</em>
                   </h3>
                   <div className="lead-copy division-intro">
-                    {divisions[2].intro.map((p) => (
+                    {ordered[2].intro.map((p) => (
                       <p key={p}>{p}</p>
                     ))}
                   </div>
                   <div className="division-action-row">
                     {onNavigate && (
                       <a
-                        href={`/${divisions[2].id}`}
+                        href={`/${ordered[2].id}`}
                         className="text-link"
                         onClick={(e) => {
                           e.preventDefault()
-                          onNavigate(divisions[2].id as PageId)
+                          onNavigate(ordered[2].id as PageId)
                         }}
                       >
-                        Explorar {divisions[2].name} →
+                        Explorar {ordered[2].name} →
                       </a>
                     )}
                   </div>
@@ -257,32 +190,32 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
 
             {/* Right Content Area (Division 1) */}
             <div className="division-slot division-slot-right">
-              {divisions[1] && (
+              {ordered[1] && (
                 <div
                   className="division-content-card division-card-1 reveal-right"
                   style={getDivisionStyle(1)}
                   aria-hidden={activeIdx !== 1}
                 >
-                  <p className="eyebrow division-card-eyebrow">N5 / {divisions[1].label}</p>
+                  <p className="eyebrow division-card-eyebrow">N5 / {ordered[1].label}</p>
                   <h3 className="display division-card-title">
-                    N5 <em>Cine</em>
+                    N5 <em>{shortName(ordered[1])}</em>
                   </h3>
                   <div className="lead-copy division-intro">
-                    {divisions[1].intro.map((p) => (
+                    {ordered[1].intro.map((p) => (
                       <p key={p}>{p}</p>
                     ))}
                   </div>
                   <div className="division-action-row">
                     {onNavigate && (
                       <a
-                        href={`/${divisions[1].id}`}
+                        href={`/${ordered[1].id}`}
                         className="text-link"
                         onClick={(e) => {
                           e.preventDefault()
-                          onNavigate(divisions[1].id as PageId)
+                          onNavigate(ordered[1].id as PageId)
                         }}
                       >
-                        Explorar {divisions[1].name} →
+                        Explorar {ordered[1].name} →
                       </a>
                     )}
                   </div>

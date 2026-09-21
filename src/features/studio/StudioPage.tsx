@@ -1,13 +1,18 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Navigation } from '@features/navigation/Navigation'
 import { DivisionPanel } from '@features/divisions/DivisionPanel'
 import { Clients, ContactCta, FeaturedWork } from '@features/home/HomeSections'
 import { RrssPage } from '@features/rrss/RrssPage'
+import { LabsPage } from '@features/labs/LabsPage'
+import { CinePage } from '@features/cine/CinePage'
+import { WorkPage } from '@features/work/WorkPage'
+import { StudioHistory } from '@features/studio/StudioHistory'
+import { StudioDirector, StudioTeam } from '@features/studio/StudioPeople'
 import { CinematicOverlay } from '../../components/CinematicOverlay'
 import { ScrollScene } from '@shared/ui/ScrollScene'
-import { BrandLogo } from '@shared/ui/BrandLogo'
+import { SiteFooter } from '@shared/ui/SiteFooter'
 import { usePageNavigation } from '@infrastructure/navigation/usePageNavigation'
 import { useStudioContent } from '@features/studio/useStudioContent'
 import { HeroVideoSequence } from '@features/studio/HeroVideoSequence'
@@ -17,15 +22,11 @@ import { ContactPage } from '@features/contact/ContactPage'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// Secciones definidas en la arquitectura web de Miro, pendientes de diseño.
-const plannedPages = {
-  work: { eyebrow: 'Work', title: 'Proyectos', sections: ['Todos los proyectos', 'Commercial / RRSS', 'Film / Cine', 'Experiences / Labs'] },
-  cine: { eyebrow: 'N5 Cine', title: 'Cine', sections: ['Filosofía', 'Documentales', 'Cortometrajes', 'Largometrajes', 'Cine para redes', 'En desarrollo'] },
-  labs: { eyebrow: 'N5 Labs', title: 'Experiencias', sections: ['Qué hacemos', 'VR / MR', '3D', 'Apps', 'Interactive', 'Selected Work'] },
-} as const
-
 export function StudioPage() {
   const root = useRef<HTMLDivElement>(null)
+  // Sube cuando una página cambia de vista sin cambiar de ruta (p. ej. abrir un Case Study) para rehacer las animaciones.
+  const [viewVersion, setViewVersion] = useState(0)
+  const refreshAnimations = useCallback(() => setViewVersion((version) => version + 1), [])
   const contentState = useStudioContent(dependencies.studioContentRepository)
   const { active, scrolled, navigate, scrollToId } = usePageNavigation(contentState.status === 'success')
 
@@ -101,7 +102,9 @@ export function StudioPage() {
         gsap.fromTo('.hero-progress span', { scaleY: 0 }, { scaleY: 1, ease: 'none', scrollTrigger: { trigger: '#inicio', start: 'top top', end: 'bottom bottom', scrub: true } })
       }
       const mainSections = gsap.utils.toArray<HTMLElement>('#contenido > section, #contenido > div > section')
-      const middleSections = mainSections.length > 2 ? mainSections.slice(1, -1) : []
+      // Todas las secciones salvo la última tienen entrada y salida con punto de reposo (CLAUDE.md).
+      // La primera ya está en reposo al cargar, así que solo anima su salida al bajar.
+      const middleSections = mainSections.length > 1 ? mainSections.slice(0, -1) : []
 
       const isMobile = window.matchMedia('(max-width: 900px)').matches
       const xOffset = isMobile ? 90 : 190
@@ -160,6 +163,8 @@ export function StudioPage() {
 
       gsap.utils.toArray<HTMLElement>('.reveal').forEach((element, index) => {
         if (middleSections.some((sec) => sec.contains(element))) return
+        // En la primera sección, lo que ya está en pantalla al cargar se muestra completo (es su punto de reposo).
+        if (mainSections[0]?.contains(element) && element.getBoundingClientRect().top < window.innerHeight) return
         const isRight = element.classList.contains('reveal-right') ||
           (!element.classList.contains('reveal-left') && (
             index % 2 === 1 ||
@@ -192,10 +197,6 @@ export function StudioPage() {
         gsap.fromTo(element, { clipPath: 'inset(12% 0 12% 0)' }, { clipPath: 'inset(0% 0 0% 0)', ease: 'none', scrollTrigger: { trigger: element, start: 'top 90%', end: 'center 55%', scrub: 0.8 } })
         if (image) gsap.fromTo(image, { scale: 1.16 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: element, start: 'top 95%', end: 'bottom 20%', scrub: 1 } })
       })
-      if (root.current?.querySelector('.ecosystem')) {
-        gsap.to('.ecosystem-orbit.one', { rotate: 140, ease: 'none', scrollTrigger: { trigger: '.ecosystem', start: 'top bottom', end: 'bottom top', scrub: 1 } })
-        gsap.to('.ecosystem-orbit.two', { rotate: -90, ease: 'none', scrollTrigger: { trigger: '.ecosystem', start: 'top bottom', end: 'bottom top', scrub: 1 } })
-      }
       gsap.utils.toArray<HTMLElement>('.division-stage-frame').forEach((frame) => {
         const panel = frame.closest('.division-panel') as HTMLElement
         const image = frame.querySelector('img')
@@ -205,6 +206,13 @@ export function StudioPage() {
         )
         if (image) gsap.fromTo(image, { scale: 1.22, yPercent: -4 }, { scale: 1, yPercent: 4, ease: 'none', scrollTrigger: { trigger: panel, start: 'top bottom', end: 'bottom top', scrub: .2 } })
       })
+      const manifestoLines = root.current?.querySelector('.manifesto-lines')
+      if (manifestoLines) {
+        gsap.fromTo(manifestoLines.children, { x: 120, opacity: 0, filter: 'blur(8px)' }, {
+          x: 0, opacity: 1, filter: 'blur(0px)', ease: 'power2.out', duration: 0.7, stagger: 0.18, delay: 0.3,
+          scrollTrigger: { trigger: manifestoLines, start: 'top 90%', once: true },
+        })
+      }
       // Los efectos de fondo son fijos: deben aparecer y desaparecer dentro de su sección para no quedar sobre las siguientes.
       if (root.current?.querySelector('#n5')) {
         gsap.timeline({ scrollTrigger: { trigger: '#n5', start: 'top bottom', end: 'bottom top', scrub: .25 } })
@@ -218,12 +226,14 @@ export function StudioPage() {
       })
     }, root)
     return () => context.revert()
-  }, [contentState.status, active])
+  }, [contentState.status, active, viewVersion])
 
   if (contentState.status === 'idle' || contentState.status === 'loading') return <LoadingScreen />
   if (contentState.status === 'error') return <div className="app-status" role="alert">No fue posible cargar el contenido de N5.</div>
-  const { creativeSystem, directionFocus, divisions, manifesto, principles, valueTypes } = contentState.data
+  const { creativeSystem, divisions, manifesto } = contentState.data
   const rrssDivision = divisions.find((division) => division.id === 'rrss')
+  const labsDivision = divisions.find((division) => division.id === 'labs')
+  const cineDivision = divisions.find((division) => division.id === 'cine')
 
   return (
     <div ref={root}>
@@ -232,7 +242,7 @@ export function StudioPage() {
       <main id="contenido">
         {active === 'home' && <>
           <section id="inicio" className="hero section-dark" aria-labelledby="hero-title">
-            <ScrollScene label="Origen de una idea" />
+            <ScrollScene />
             <div className="hero-sticky">
               <div className="hero-image">
                 <HeroVideoSequence triggerSelector="#inicio" />
@@ -276,7 +286,7 @@ export function StudioPage() {
           </section>
 
           <section id="n5" className="identity section-light" aria-labelledby="identity-title">
-            <ScrollScene label="Identidad del estudio" />
+            <ScrollScene />
             <div className="page-shell">
               <div className="section-intro reveal reveal-left"><p className="eyebrow">Qué es N5</p><p className="section-index">Manifiesto</p></div>
               <div className="identity-grid">
@@ -290,7 +300,7 @@ export function StudioPage() {
           </section>
 
           <section id="divisiones" className="divisions section-dark" aria-labelledby="divisions-title">
-            <ScrollScene label="Tres especialidades" />
+            <ScrollScene />
             <div className="division-list"><DivisionPanel divisions={divisions} onNavigate={navigate} /></div>
           </section>
 
@@ -301,123 +311,45 @@ export function StudioPage() {
         </>}
 
         {active === 'rrss' && rrssDivision && <RrssPage division={rrssDivision} onNavigate={navigate} />}
+        {active === 'work' && <WorkPage onNavigate={navigate} onViewChange={refreshAnimations} />}
+        {active === 'labs' && labsDivision && <LabsPage division={labsDivision} onNavigate={navigate} />}
+        {active === 'cine' && cineDivision && <CinePage division={cineDivision} onNavigate={navigate} />}
 
         {active === 'contacto' && <ContactPage onNavigate={navigate} />}
 
-        {active in plannedPages && (() => {
-          const page = plannedPages[active as keyof typeof plannedPages]
-          return (
-            <section key={active} className="planned-page section-dark route-page" aria-labelledby="planned-title">
-              <div className="page-shell">
-                <div className="section-intro reveal reveal-left"><p className="eyebrow">{page.eyebrow}</p><p className="section-index">En construcción</p></div>
-                <h2 id="planned-title" className="display reveal reveal-left">{page.title}</h2>
-                <ol className="planned-list reveal reveal-right">{page.sections.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, '0')}</span>{item}</li>)}</ol>
-              </div>
-            </section>
-          )
-        })()}
-
         {active === 'studio' && <>
-          <section id="filosofia" className="philosophy section-dark route-page" aria-labelledby="philosophy-title">
-          <ScrollScene label="Propósito y visión" />
-          <div className="page-shell">
-            <div className="section-intro reveal reveal-left"><p className="eyebrow">Nuestro propósito</p><p className="section-index">Historias, experiencias y valor</p></div>
-            <div className="purpose-compact">
-              <div className="purpose-compact-head reveal reveal-left">
-                <h3>Historias, experiencias y soluciones creativas que aporten valor.</h3>
+          <section id="manifiesto" className="manifesto section-dark route-page" aria-labelledby="manifesto-title">
+          <ScrollScene />
+          <div className="page-shell manifesto-inner">
+            <p className="eyebrow eyebrow-accent reveal reveal-left">Manifiesto N5</p>
+            <div className="manifesto-grid">
+              <div>
+                <h2 id="manifesto-title" className="manifesto-lead reveal reveal-left">No buscamos ser la empresa que más proyectos produce.</h2>
+                <p className="manifesto-answer reveal reveal-left">Buscamos construir una organización capaz de producir <em>grandes proyectos</em> de manera consistente.</p>
               </div>
-              <div className="purpose-compact-body reveal reveal-right">
-                <p>Existimos para transformar ideas y aportar valor a personas, marcas y comunidades.</p>
-                <p>Un proyecto publicitario puede ayudar a comunicar mejor. Una experiencia tecnológica puede resolver una necesidad. Una película puede generar reflexión, emoción o memoria.</p>
-              </div>
+              <ul className="manifesto-lines reveal reveal-right">{manifesto.map((line) => <li key={line}>{line}</li>)}</ul>
             </div>
           </div>
-          <div className="marquee" aria-label="Formas de valor"><div>{[...valueTypes, ...valueTypes].map((value, i) => <span key={`${value}-${i}`}>{value}<i>✦</i></span>)}</div></div>
+        </section>
 
+          <StudioHistory />
+          <StudioDirector />
+          <StudioTeam />
+
+          <section id="filosofia" className="philosophy section-light route-page" aria-labelledby="philosophy-title">
+          <ScrollScene />
           <div className="page-shell">
-            <div className="vision">
-              <p className="eyebrow reveal reveal-left">Visión</p>
-              <blockquote className="reveal reveal-left">Construir un estudio creativo referente en Latinoamérica por su capacidad de integrar narrativa, producción audiovisual, tecnología e innovación.</blockquote>
-              <p className="reveal reveal-right">Desarrollamos proyectos con altos estándares creativos y técnicos mediante equipos preparados y procesos sólidos. N5 debe producir proyectos extraordinarios sin depender permanentemente de una sola persona.</p>
-            </div>
             <div className="section-intro reveal reveal-left"><p className="eyebrow">Filosofía N5</p><p className="section-index">La creatividad necesita estructura</p></div>
             <div className="philosophy-head">
               <h2 id="philosophy-title" className="display reveal reveal-left">La estructura no limita.<br /><em>Libera el talento.</em></h2>
               <p className="reveal reveal-right">Las mejores ideas alcanzan su potencial cuando hay procesos claros, personas preparadas y criterios compartidos. Construimos equipos capaces de aportar su talento dentro de un sistema.</p>
             </div>
-            <ol className="system-list">{creativeSystem.map((item, index) => <li className={`reveal ${index % 2 === 0 ? 'reveal-left' : 'reveal-right'}`} key={item}><span>0{index + 1}</span>{item}</li>)}</ol>
-            <div className="principles-grid">
-              {principles.map((principle, index) => (
-                <article className={`principle-card reveal ${index % 2 === 0 ? 'reveal-left' : 'reveal-right'}`} key={principle.title}>
-                  <span className="card-index">{String(index + 1).padStart(2, '0')}</span>
-                  <h3>{principle.title}</h3>
-                  {principle.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-                  {principle.bullets && <ul>{principle.bullets.map((item) => <li key={item}>{item}</li>)}</ul>}
-                  {principle.path && <ol className="learning-path">{principle.path.map((step) => <li key={step}>{step}</li>)}</ol>}
-                </article>
-              ))}
-            </div>
-            <div className="operating-principle">
-              <div className="reveal reveal-left">
-                <p className="eyebrow">Principio operativo central</p>
-                <h3>El director no debe realizar una tarea únicamente porque puede hacerla mejor.</h3>
-                <p>Debe intervenir donde su criterio aporte un valor que el sistema todavía no pueda replicar. Transferir tareas ejecutivas permite que Dirección se concentre en:</p>
-              </div>
-              <div className="focus-list reveal reveal-right">{directionFocus.map((item) => <span key={item}>{item}</span>)}</div>
-            </div>
+            <ol className="system-list">{creativeSystem.map((item, index) => <li className={`reveal ${index % 2 === 0 ? 'reveal-left' : 'reveal-right'}`} key={item}>{item}</li>)}</ol>
           </div>
           </section>
 
-          <section className="ecosystem section-dark" aria-labelledby="ecosystem-title">
-            <ScrollScene label="Inteligencia compartida" />
-            <div className="ecosystem-orbit one" aria-hidden="true" /><div className="ecosystem-orbit two" aria-hidden="true" />
-            <div className="page-shell ecosystem-inner">
-              <p className="eyebrow eyebrow-accent reveal reveal-left">El ecosistema creativo</p>
-              <h2 id="ecosystem-title" className="display reveal reveal-left">Diferentes capacidades.<br /><em>Una inteligencia compartida.</em></h2>
-              <div className="ecosystem-map">
-                <article className="reveal reveal-left"><span>RRSS</span><h3>Capacidad audiovisual</h3><p>Genera experiencia comercial, flujo de proyectos y capacidad de producción.</p></article>
-                <article className="reveal"><span>Labs</span><h3>Innovación tecnológica</h3><p>Desarrolla herramientas, productos y nuevas posibilidades de interacción.</p></article>
-                <article className="reveal reveal-right"><span>Cine</span><h3>Voz narrativa</h3><p>Construye dirección, propiedad intelectual y una sensibilidad cinematográfica propia.</p></article>
-              </div>
-              <p className="ecosystem-note reveal reveal-right">El conocimiento de una división fortalece a las demás. La IA atraviesa las tres; el cine eleva la publicidad; la tecnología abre nuevas formas de narrativa y producción.</p>
-            </div>
-          </section>
+          <Clients footer theme="dark" />
         </>}
-
-        {active === 'studio' && <section id="academia" className="academy philosophy section-dark route-page" aria-labelledby="academy-title">
-          <ScrollScene label="Formación y crecimiento" />
-          <div className="page-shell">
-            <div className="section-intro reveal reveal-left"><p className="eyebrow">Academia N5</p><p className="section-index">Formación continua</p></div>
-            <div className="philosophy-head">
-              <h2 id="academy-title" className="display reveal reveal-left">Conocimiento que se transforma<br /><em>en capacidad.</em></h2>
-              <p className="reveal reveal-right">N5 funciona también como una escuela práctica. Compartimos conocimiento técnico, creativo y profesional para desarrollar nuevas capacidades.</p>
-            </div>
-            <div className="operating-principle">
-              <div className="reveal reveal-left">
-                <p className="eyebrow">Aprender haciendo</p>
-                <h3>El objetivo no es crear dependencia hacia quien enseña. Es multiplicar conocimiento.</h3>
-              </div>
-              <div className="focus-list reveal reveal-right">
-                {['Observar', 'Ejecutar acompañado', 'Ejecutar con supervisión', 'Trabajar con autonomía', 'Enseñar a otra persona'].map((step) => <span key={step}>{step}</span>)}
-              </div>
-            </div>
-          </div>
-        </section>}
-
-        {active === 'studio' && <section id="manifiesto" className="manifesto section-dark route-page" aria-labelledby="manifesto-title">
-          <ScrollScene label="Lo que permanece" />
-          <div className="page-shell manifesto-inner">
-            <p className="eyebrow eyebrow-accent reveal reveal-left">Manifiesto N5</p>
-            <h2 id="manifesto-title" className="manifesto-lead reveal reveal-left">No buscamos ser la empresa que más proyectos produce.</h2>
-            <p className="manifesto-answer reveal reveal-right">Buscamos construir una organización capaz de producir <em>grandes proyectos</em> de manera consistente.</p>
-            <div className="manifesto-lines">{manifesto.map((line, index) => <p className={`reveal ${index % 2 === 0 ? 'reveal-left' : 'reveal-right'}`} key={line}><span>0{index + 1}</span>{line}</p>)}</div>
-            <div className="manifesto-close">
-              <p className="reveal reveal-right">Queremos que el conocimiento se transforme en capacidad, la capacidad en oportunidades y las oportunidades en proyectos que valga la pena recordar.</p>
-              <h3 className="reveal reveal-left">Transformamos ideas en experiencias que trascienden.</h3>
-            </div>
-          </div>
-          <footer className="footer page-shell"><a href="/" onClick={(e) => { e.preventDefault(); navigate('home') }} className="footer-brand" aria-label="N5 Studio, volver al inicio"><BrandLogo full /></a><p>Estudio creativo<br />Latinoamérica</p><button onClick={() => navigate('home')}>Volver al inicio ↑</button><p className="copyright">© {new Date().getFullYear()} N5 Studio</p></footer>
-        </section>}
       </main>
     </div>
   )

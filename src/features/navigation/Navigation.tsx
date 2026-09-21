@@ -30,6 +30,8 @@ export function Navigation({ active, scrolled, onNavigate }: NavigationProps) {
 
   const go = (id: PageId) => {
     setOpen(false)
+    // Al navegar con clic, el enlace suelta el foco para que no quede marcado.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
     onNavigate(id)
   }
 

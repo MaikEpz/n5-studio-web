@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
+import { DIVISION_TRANSITIONS } from './divisionPhases'
 
 // Exact SVG path of the N5 emblem from BrandLogo.tsx
 const N5_SVG_PATH =
@@ -60,26 +61,22 @@ function interpolateTarget(progress: number, isMobile: boolean): ModelTargetStat
   let to = DIVISION_TARGETS[0]
   let t = 0
 
-  if (progress <= 0.33) {
-    from = DIVISION_TARGETS[0]
-    to = DIVISION_TARGETS[0]
-    t = 0
-  } else if (progress < 0.55) {
+  // Mismos tramos que los textos (divisionPhases.ts): el modelo se mueve solo durante cada cambio.
+  const [first, second] = DIVISION_TRANSITIONS
+  if (progress <= first.start) {
+    from = to = DIVISION_TARGETS[0]
+  } else if (progress < first.end) {
     from = DIVISION_TARGETS[0]
     to = DIVISION_TARGETS[1]
-    t = (progress - 0.33) / (0.55 - 0.33)
-  } else if (progress <= 0.75) {
-    from = DIVISION_TARGETS[1]
-    to = DIVISION_TARGETS[1]
-    t = 0
-  } else if (progress < 0.92) {
+    t = (progress - first.start) / (first.end - first.start)
+  } else if (progress <= second.start) {
+    from = to = DIVISION_TARGETS[1]
+  } else if (progress < second.end) {
     from = DIVISION_TARGETS[1]
     to = DIVISION_TARGETS[2]
-    t = (progress - 0.75) / (0.92 - 0.75)
+    t = (progress - second.start) / (second.end - second.start)
   } else {
-    from = DIVISION_TARGETS[2]
-    to = DIVISION_TARGETS[2]
-    t = 0
+    from = to = DIVISION_TARGETS[2]
   }
 
   // Smooth Hermite easing for transitions

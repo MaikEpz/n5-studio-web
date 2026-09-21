@@ -10,7 +10,7 @@ export const navigationItems: readonly NavigationItem[] = [
   { id: 'cine', label: 'N5 Cine', path: '/cine' },
   { id: 'labs', label: 'N5 Labs', path: '/labs' },
   { id: 'studio', label: 'Studio', path: '/studio' },
-  { id: 'contacto', label: 'Contacto', path: '/contacto', cta: true },
+  { id: 'contacto', label: 'Cotizar', path: '/contacto', cta: true },
 ]
 
 const legacyPaths: Record<string, PageId> = {

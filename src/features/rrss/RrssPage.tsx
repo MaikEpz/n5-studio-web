@@ -25,7 +25,7 @@ export function RrssPage({ division, onNavigate }: RrssPageProps) {
   return (
     <>
       <section id="rrss-que-hacemos" className="rrss-intro section-dark route-page" aria-labelledby="rrss-title">
-        <ScrollScene label="Comunicación" />
+        <ScrollScene />
         <div className="page-shell">
           <div className="section-intro reveal reveal-left"><p className="eyebrow">{division.name}</p><p className="section-index">Qué hacemos</p></div>
           <div className="rrss-intro-grid">
