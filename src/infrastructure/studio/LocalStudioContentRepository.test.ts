@@ -6,6 +6,6 @@ describe('LocalStudioContentRepository', () => {
     const content = await new LocalStudioContentRepository().getPublished()
     expect(content.divisions.map(({ id }) => id)).toEqual(['rrss', 'labs', 'cine'])
     expect(content.principles).toHaveLength(8)
-    expect(content.manifesto).toHaveLength(5)
+    expect(content.manifesto).toHaveLength(4)
   })
 })

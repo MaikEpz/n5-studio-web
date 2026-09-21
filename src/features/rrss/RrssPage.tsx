@@ -2,6 +2,7 @@ import type { PageId } from '@application/navigation/navigation'
 import type { Division } from '@domain/studio/models'
 import { ScrollScene } from '@shared/ui/ScrollScene'
 import { ContactCta } from '@features/home/HomeSections'
+import { ProcessFlow } from './ProcessFlow'
 
 type RrssPageProps = { division: Division; onNavigate: (id: PageId) => void }
 
@@ -39,14 +40,7 @@ export function RrssPage({ division, onNavigate }: RrssPageProps) {
         <div className="page-shell">
           <div className="section-intro reveal reveal-left"><p className="eyebrow">Proceso</p><p className="section-index">Cómo trabajamos</p></div>
           <h2 id="rrss-process-title" className="rrss-section-title reveal reveal-left">De la idea a la pieza final,<br /><em>en cuatro pasos.</em></h2>
-          <ol className="process-steps">
-            {processSteps.map((step, index) => (
-              <li key={step.title} className={`reveal ${index % 2 === 0 ? 'reveal-left' : 'reveal-right'}`}>
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
-              </li>
-            ))}
-          </ol>
+          <ProcessFlow steps={processSteps} />
         </div>
       </section>
 

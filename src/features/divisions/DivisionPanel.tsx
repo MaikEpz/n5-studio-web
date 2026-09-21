@@ -4,7 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import type { PageId } from '@application/navigation/navigation'
 import type { Division } from '@domain/studio/models'
 import { N5ModelCanvas } from './N5ModelCanvas'
-import { DIVISION_SCROLL_LENGTH, DIVISION_TEXT_PHASE, DIVISION_TRANSITIONS } from './divisionPhases'
+import { DIVISION_TEXT_PHASE, DIVISION_TRANSITIONS } from './divisionPhases'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -15,35 +15,142 @@ export type DivisionPanelProps = {
 
 export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
   const root = useRef<HTMLElement>(null)
-  const pinWrapperRef = useRef<HTMLDivElement>(null)
   const [scrollProgress, setScrollProgress] = useState(0)
   const [activeIdx, setActiveIdx] = useState(0)
 
   useLayoutEffect(() => {
-    if (!root.current || !pinWrapperRef.current) return
+    if (!root.current) return
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     const context = gsap.context(() => {
-      const pinTrigger = ScrollTrigger.create({
-        trigger: root.current,
-        start: 'top top',
-        end: DIVISION_SCROLL_LENGTH,
-        pin: pinWrapperRef.current,
-        pinSpacing: true,
-        scrub: reduceMotion ? false : 0.8,
-        anticipatePin: 1,
-        invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          const p = self.progress
-          setScrollProgress(p)
-          // Activa la división cuyo cambio ya pasó la mitad.
-          setActiveIdx(DIVISION_TRANSITIONS.filter(({ start, end }) => p >= (start + end) / 2).length)
+      const isMobile = window.matchMedia('(max-width: 900px)').matches
+      const sectionOffset = isMobile ? 64 : 160
+      const sectionRotation = isMobile ? 0 : 9
+      const syncProgress = (value: number) => {
+        const progress = gsap.utils.clamp(0, 1, value)
+        setScrollProgress(progress)
+        setActiveIdx(DIVISION_TRANSITIONS.filter(({ start, end }) => progress >= (start + end) / 2).length)
+      }
+
+      gsap.timeline({
+        scrollTrigger: {
+          trigger: root.current,
+          start: 'top bottom',
+          // La entrada termina antes de activar el pin. Ese breve tramo de reposo
+          // evita que la animación y el cambio a posición fija ocurran a la vez.
+          end: 'top 16%',
+          // Sin inercia: incluso con scroll muy rápido el estado visual siempre
+          // coincide con la posición real y no queda una animación pendiente.
+          scrub: reduceMotion ? false : true,
+          fastScrollEnd: true,
+          invalidateOnRefresh: true,
         },
       })
+        .fromTo('.division-slot-left', {
+          x: -sectionOffset,
+          z: 80,
+          rotateY: sectionRotation,
+          opacity: 0,
+          filter: 'blur(8px)',
+        }, {
+          x: 0,
+          z: 0,
+          rotateY: 0,
+          opacity: 1,
+          filter: 'blur(0px)',
+          ease: 'power1.out',
+        }, 0)
+        .fromTo('.division-slot-right', {
+          x: sectionOffset,
+          z: 80,
+          rotateY: -sectionRotation,
+          opacity: 0,
+          filter: 'blur(8px)',
+        }, {
+          x: 0,
+          z: 0,
+          rotateY: 0,
+          opacity: 1,
+          filter: 'blur(0px)',
+          ease: 'power1.out',
+        }, 0)
+        .fromTo('.division-3d-stage', {
+          xPercent: 18,
+          scale: 0.92,
+          opacity: 0,
+          filter: 'blur(10px)',
+        }, {
+          xPercent: 0,
+          scale: 1,
+          opacity: 1,
+          filter: 'blur(0px)',
+          ease: 'power1.out',
+        }, 0)
+        .fromTo('.division-header-shell', {
+          y: -24,
+          opacity: 0,
+        }, {
+          y: 0,
+          opacity: 1,
+          ease: 'power1.out',
+        }, 0.12)
+
+      // El contenedor se fija con CSS sticky. ScrollTrigger solo mide el tramo;
+      // así no tiene que insertar ni retirar un pin entre fotogramas al hacer
+      // scroll rápido, que era lo que producía el salto visual.
+      const progressTrigger = ScrollTrigger.create({
+        trigger: root.current,
+        start: 'top top',
+        end: 'bottom bottom',
+        invalidateOnRefresh: true,
+        onUpdate: (self) => syncProgress(self.progress),
+        onRefresh: (self) => syncProgress(self.progress),
+        onLeave: () => syncProgress(1),
+        onLeaveBack: () => syncProgress(0),
+      })
+
+      gsap.timeline({
+        scrollTrigger: {
+          trigger: root.current,
+          start: 'bottom bottom',
+          end: 'bottom top',
+          scrub: reduceMotion ? false : true,
+          fastScrollEnd: true,
+          invalidateOnRefresh: true,
+        },
+      })
+        .to('.division-slot-left', {
+          x: -sectionOffset,
+          z: 80,
+          rotateY: sectionRotation,
+          opacity: 0,
+          filter: 'blur(8px)',
+          ease: 'power1.in',
+        }, 0)
+        .to('.division-slot-right', {
+          x: sectionOffset,
+          z: 80,
+          rotateY: -sectionRotation,
+          opacity: 0,
+          filter: 'blur(8px)',
+          ease: 'power1.in',
+        }, 0)
+        .to('.division-3d-stage', {
+          xPercent: 18,
+          scale: 0.92,
+          opacity: 0,
+          filter: 'blur(10px)',
+          ease: 'power1.in',
+        }, 0)
+        .to('.division-header-shell', {
+          y: -24,
+          opacity: 0,
+          ease: 'power1.in',
+        }, 0)
 
       // Update hash or state on change if needed
       return () => {
-        pinTrigger.kill()
+        progressTrigger.kill()
       }
     }, root)
 
@@ -104,7 +211,7 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
         <span className="division-anchor" id={division.id} key={division.id} aria-hidden="true" />
       ))}
 
-      <div className="division-pin-container" ref={pinWrapperRef}>
+      <div className="division-pin-container">
         {/* Top Section Header aligned to page-shell */}
         <div className="division-header-shell page-shell">
           <div className="section-intro">
@@ -125,7 +232,7 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
             <div className="division-slot division-slot-left">
               {ordered[0] && (
                 <div
-                  className="division-content-card division-card-0 reveal-left"
+                  className="division-content-card division-card-0"
                   style={getDivisionStyle(0)}
                   aria-hidden={activeIdx !== 0}
                 >
@@ -157,7 +264,7 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
 
               {ordered[2] && (
                 <div
-                  className="division-content-card division-card-2 reveal-left"
+                  className="division-content-card division-card-2"
                   style={getDivisionStyle(2)}
                   aria-hidden={activeIdx !== 2}
                 >
@@ -192,7 +299,7 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
             <div className="division-slot division-slot-right">
               {ordered[1] && (
                 <div
-                  className="division-content-card division-card-1 reveal-right"
+                  className="division-content-card division-card-1"
                   style={getDivisionStyle(1)}
                   aria-hidden={activeIdx !== 1}
                 >

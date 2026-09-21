@@ -1,15 +1,15 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Navigation } from '@features/navigation/Navigation'
 import { DivisionPanel } from '@features/divisions/DivisionPanel'
-import { Clients, ContactCta, FeaturedWork } from '@features/home/HomeSections'
+import { Clients, ClientStrip, ContactCta, FeaturedWork } from '@features/home/HomeSections'
 import { RrssPage } from '@features/rrss/RrssPage'
 import { LabsPage } from '@features/labs/LabsPage'
 import { CinePage } from '@features/cine/CinePage'
 import { WorkPage } from '@features/work/WorkPage'
 import { StudioHistory } from '@features/studio/StudioHistory'
-import { StudioDirector, StudioTeam } from '@features/studio/StudioPeople'
+import { StudioTeam } from '@features/studio/StudioPeople'
 import { CinematicOverlay } from '../../components/CinematicOverlay'
 import { ScrollScene } from '@shared/ui/ScrollScene'
 import { SiteFooter } from '@shared/ui/SiteFooter'
@@ -21,6 +21,57 @@ import { dependencies } from '@app/dependencies'
 import { ContactPage } from '@features/contact/ContactPage'
 
 gsap.registerPlugin(ScrollTrigger)
+
+function ManifestoBelief({ lines }: { lines: readonly string[] }) {
+  const phrases = lines.map((line) => line.replace(/^Creemos en\s+/i, ''))
+  const [index, setIndex] = useState(0)
+  const valueRef = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    if (phrases.length < 2) return
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const interval = window.setInterval(() => {
+      const value = valueRef.current
+      if (!value) return
+
+      const showNext = () => {
+        setIndex((current) => (current + 1) % phrases.length)
+        if (reduceMotion) return
+        requestAnimationFrame(() => {
+          if (!valueRef.current) return
+          gsap.fromTo(valueRef.current,
+            { y: 18, opacity: 0, filter: 'blur(6px)' },
+            { y: 0, opacity: 1, filter: 'blur(0px)', duration: 0.5, ease: 'power2.out', overwrite: true },
+          )
+        })
+      }
+
+      if (reduceMotion) showNext()
+      else gsap.to(value, {
+        y: -18,
+        opacity: 0,
+        filter: 'blur(6px)',
+        duration: 0.32,
+        ease: 'power2.in',
+        overwrite: true,
+        onComplete: showNext,
+      })
+    }, 2800)
+
+    return () => {
+      window.clearInterval(interval)
+      if (valueRef.current) gsap.killTweensOf(valueRef.current)
+    }
+  }, [phrases.length])
+
+  if (!phrases.length) return null
+  return (
+    <p className="manifesto-belief reveal reveal-right" aria-live="polite">
+      <span className="manifesto-belief-prefix">Creemos en</span>
+      <span className="manifesto-belief-value" ref={valueRef}>{phrases[index]}</span>
+    </p>
+  )
+}
 
 export function StudioPage() {
   const root = useRef<HTMLDivElement>(null)
@@ -35,7 +86,42 @@ export function StudioPage() {
     if (reduceMotion || !root.current) return
     const context = gsap.context(() => {
       if (root.current?.querySelector('#inicio')) {
-        gsap.from('.hero-title .line span, .hero-foot > *', { yPercent: 110, opacity: 0, duration: 1.35, stagger: 0.1, ease: 'power4.out', delay: 0.15 })
+        gsap.timeline({ delay: 0.15 })
+          .fromTo('.hero-brand-block', {
+            xPercent: -120,
+            yPercent: -10,
+            rotateY: 15,
+            scale: 0.85,
+            opacity: 0,
+            filter: 'blur(10px)',
+          }, {
+            xPercent: 0,
+            yPercent: 0,
+            rotateY: 0,
+            scale: 1,
+            opacity: 1,
+            filter: 'blur(0px)',
+            duration: 1.2,
+            ease: 'power4.out',
+          }, 0)
+          .fromTo('.hero-intro', {
+            xPercent: 35,
+            opacity: 0,
+          }, {
+            xPercent: 0,
+            opacity: 1,
+            duration: 0.9,
+            ease: 'power3.out',
+          }, 0.16)
+          .fromTo('.hero-foot', {
+            yPercent: 50,
+            opacity: 0,
+          }, {
+            yPercent: 0,
+            opacity: 1,
+            duration: 0.75,
+            ease: 'power3.out',
+          }, 0.28)
         gsap.fromTo('.hero-image',
           { scale: 1.32, clipPath: 'inset(0% 0% 0% 0%)' },
           { scale: 0.76, clipPath: 'inset(3% 3% 3% 3%)', ease: 'none', scrollTrigger: { trigger: '#inicio', start: 'top top', end: 'bottom bottom', scrub: 1 } },
@@ -60,33 +146,22 @@ export function StudioPage() {
             duration: 0.22,
             ease: 'power1.out',
           }, 0)
-          .to('.hero-orbit', {
-            rotate: 85,
-            scale: 0.65,
+          .to('.hero-intro', {
+            xPercent: 35,
             opacity: 0,
-            duration: 0.35,
+            duration: 0.3,
             ease: 'power1.in',
           }, 0)
-          .to('.hero-title .line:nth-child(1)', {
-            xPercent: 120,
+          .to('.hero-brand-block', {
+            xPercent: -120,
             yPercent: -10,
-            rotateY: -15,
+            rotateY: 15,
             scale: 0.85,
             opacity: 0,
             filter: 'blur(10px)',
             duration: 0.38,
             ease: 'power2.in',
           }, 0.02)
-          .to('.hero-title .line:nth-child(2)', {
-            xPercent: -120,
-            yPercent: 10,
-            rotateY: 15,
-            scale: 0.85,
-            opacity: 0,
-            filter: 'blur(10px)',
-            duration: 0.42,
-            ease: 'power2.in',
-          }, 0.05)
           .fromTo('.hero-white-fade', {
             opacity: 0,
           }, {
@@ -206,20 +281,6 @@ export function StudioPage() {
         )
         if (image) gsap.fromTo(image, { scale: 1.22, yPercent: -4 }, { scale: 1, yPercent: 4, ease: 'none', scrollTrigger: { trigger: panel, start: 'top bottom', end: 'bottom top', scrub: .2 } })
       })
-      const manifestoLines = root.current?.querySelector('.manifesto-lines')
-      if (manifestoLines) {
-        gsap.fromTo(manifestoLines.children, { x: 120, opacity: 0, filter: 'blur(8px)' }, {
-          x: 0, opacity: 1, filter: 'blur(0px)', ease: 'power2.out', duration: 0.7, stagger: 0.18, delay: 0.3,
-          scrollTrigger: { trigger: manifestoLines, start: 'top 90%', once: true },
-        })
-      }
-      // Los efectos de fondo son fijos: deben aparecer y desaparecer dentro de su sección para no quedar sobre las siguientes.
-      if (root.current?.querySelector('#n5')) {
-        gsap.timeline({ scrollTrigger: { trigger: '#n5', start: 'top bottom', end: 'bottom top', scrub: .25 } })
-          .fromTo('.cinematic-reticle', { scale: 1.8, opacity: 0 }, { scale: 1, opacity: .28, ease: 'none', duration: .5 }, 0)
-          .to('.cinematic-reticle', { scale: .6, opacity: 0, ease: 'none', duration: .5 }, .5)
-      }
-
       gsap.utils.toArray<HTMLElement>('.scroll-scene').forEach((scene) => {
         if (middleSections.some((sec) => sec.contains(scene))) return
         gsap.fromTo(scene, { opacity: 0, scale: 1.12 }, { opacity: .5, scale: 1, ease: 'none', scrollTrigger: { trigger: scene.parentElement, start: 'top bottom', end: 'top 30%', scrub: .25 } })
@@ -248,18 +309,25 @@ export function StudioPage() {
                 <HeroVideoSequence triggerSelector="#inicio" />
               </div>
               <div className="hero-shade" /><div className="noise" aria-hidden="true" />
-              <div className="hero-orbit" aria-hidden="true" />
               <div className="hero-progress" aria-hidden="true"><span /></div>
               <div className="hero-white-fade" aria-hidden="true" />
               <div className="hero-content page-shell">
-                <h1 id="hero-title" className="hero-title">
-                  <span className="line inset-left"><span>Ideas que</span></span>
-                  <span className="line inset-right"><span>transcienden</span></span>
-                </h1>
+                <div className="hero-lockup">
+                  <div className="hero-brand-block">
+                    <h1 id="hero-title" className="hero-title" aria-label="N5 Studio">
+                      <span className="line">
+                        <span className="hero-title-n5">N5</span>
+                        <span className="hero-title-studio">Studio</span>
+                      </span>
+                    </h1>
+                    <p className="hero-count">Tres unidades, una visión.</p>
+                  </div>
+                  <p className="hero-intro">N5 integra <span className="hero-intro-emphasis"><strong>narrativa</strong>, producción audiovisual, <strong>tecnología</strong> e innovación</span> para transformar ideas en experiencias.</p>
+                </div>
                 <div className="hero-foot">
-                  <p>Narrativa, producción audiovisual,<br />tecnología e innovación.</p>
+                  <ClientStrip />
                   <button
-                    onClick={() => scrollToId('n5')}
+                    onClick={() => scrollToId('divisiones')}
                     className="scroll-cue"
                     aria-label="Desplazarse hacia abajo"
                   >
@@ -279,33 +347,17 @@ export function StudioPage() {
                       />
                     </svg>
                   </button>
-                  <p className="hero-count">Tres unidades.<br />Una visión.</p>
                 </div>
               </div>
             </div>
           </section>
 
-          <section id="n5" className="identity section-light" aria-labelledby="identity-title">
-            <ScrollScene />
-            <div className="page-shell">
-              <div className="section-intro reveal reveal-left"><p className="eyebrow">Qué es N5</p><p className="section-index">Manifiesto</p></div>
-              <div className="identity-grid">
-                <h2 id="identity-title" className="display reveal reveal-left">Un estudio.<br /><em>Tres fuerzas.</em></h2>
-                <div className="lead-copy reveal reveal-right">
-                  <p>N5 integra <strong>narrativa, producción audiovisual, tecnología e innovación</strong> para transformar ideas en experiencias.</p>
-                  <p>No se limita a una sola disciplina. Sus tres unidades responden a necesidades diferentes, conectadas por una misma filosofía: crear proyectos con identidad y valor.</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section id="divisiones" className="divisions section-dark" aria-labelledby="divisions-title">
+          <section id="divisiones" className="divisions section-light" aria-labelledby="divisions-title">
             <ScrollScene />
             <div className="division-list"><DivisionPanel divisions={divisions} onNavigate={navigate} /></div>
           </section>
 
           <FeaturedWork onNavigate={navigate} />
-          <Clients />
           <ContactCta onNavigate={navigate} />
 
         </>}
@@ -324,16 +376,15 @@ export function StudioPage() {
             <p className="eyebrow eyebrow-accent reveal reveal-left">Manifiesto N5</p>
             <div className="manifesto-grid">
               <div>
-                <h2 id="manifesto-title" className="manifesto-lead reveal reveal-left">No buscamos ser la empresa que más proyectos produce.</h2>
-                <p className="manifesto-answer reveal reveal-left">Buscamos construir una organización capaz de producir <em>grandes proyectos</em> de manera consistente.</p>
+                <h2 id="manifesto-title" className="manifesto-lead reveal reveal-left">No buscamos producir más.</h2>
+                <p className="manifesto-answer reveal reveal-left">Buscamos crear <em>grandes proyectos</em> de forma consistente.</p>
               </div>
-              <ul className="manifesto-lines reveal reveal-right">{manifesto.map((line) => <li key={line}>{line}</li>)}</ul>
+              <ManifestoBelief lines={manifesto} />
             </div>
           </div>
         </section>
 
           <StudioHistory />
-          <StudioDirector />
           <StudioTeam />
 
           <section id="filosofia" className="philosophy section-light route-page" aria-labelledby="philosophy-title">

@@ -89,5 +89,4 @@ export const manifesto = [
   'Creemos en la formación.',
   'Creemos en los procesos.',
   'Creemos en el criterio.',
-  'Creemos en la creatividad acompañada de estructura.',
 ]

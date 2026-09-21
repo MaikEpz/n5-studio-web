@@ -28,6 +28,26 @@ const clients: readonly { name: string; logo?: string; darken?: boolean }[] = [
   { name: 'GAD Parroquial de Baños', logo: '/images/clientes/gad-banos.png', darken: true },
 ]
 
+export function ClientStrip() {
+  return (
+    <div className="hero-clients" aria-label="Nuestros clientes">
+      <div className="hero-clients-viewport">
+        <div className="hero-clients-track">
+          {[0, 1].map((copy) => (
+            <ul className="hero-clients-list" key={copy} aria-hidden={copy === 1 || undefined}>
+              {clients.map(({ name, logo }) => (
+                <li key={`${copy}-${name}`} className="hero-client-logo">
+                  {logo ? <img src={logo} alt={copy === 0 ? name : ''} /> : <span>{name}</span>}
+                </li>
+              ))}
+            </ul>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function FeaturedWork({ onNavigate }: HomeSectionProps) {
   return (
     <section id="featured-work" className="featured-work section-dark" aria-labelledby="featured-work-title">
