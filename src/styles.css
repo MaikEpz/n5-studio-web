@@ -82,16 +82,6 @@ img { display: block; max-width: 100%; }
 
 .cinematic-overlay { position: fixed; z-index: 2; inset: 0; overflow: hidden; pointer-events: none; perspective: 1200px; transform-style: preserve-3d; }
 .app-status { min-height: 100svh; display: grid; place-items: center; padding: 2rem; color: var(--text-page); background: var(--black); }
-.app-loading-screen { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: var(--black); color: var(--white); transition: opacity .5s ease, visibility .5s ease; }
-.app-loading-screen-fade { opacity: 0; visibility: hidden; pointer-events: none; }
-.loading-screen-glow { position: absolute; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(103,13,140,.35) 0%, rgba(103,13,140,.05) 50%, transparent 70%); pointer-events: none; animation: loadingGlowPulse 2.4s ease-in-out infinite; }
-.loading-screen-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 26px; }
-.loading-screen-logo { width: 92px; height: auto; color: var(--white); animation: loadingLogoBreathe 2s ease-in-out infinite; }
-.loading-screen-line { width: 130px; height: 2px; background: rgba(255,255,255,.12); border-radius: 1px; overflow: hidden; position: relative; }
-.loading-screen-progress { position: absolute; left: 0; top: 0; height: 100%; width: 45%; background: linear-gradient(90deg, transparent, var(--brand), #a43cd2); border-radius: 1px; animation: loadingLineShimmer 1.5s cubic-bezier(.4,0,.2,1) infinite; }
-@keyframes loadingLogoBreathe { 0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(103,13,140,0)); opacity: .88; } 50% { transform: scale(1.04); filter: drop-shadow(0 0 20px rgba(103,13,140,.7)); opacity: 1; } }
-@keyframes loadingGlowPulse { 0%, 100% { transform: scale(.9); opacity: .6; } 50% { transform: scale(1.15); opacity: 1; } }
-@keyframes loadingLineShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
 .cinematic-reticle { position: absolute; left: 50%; top: 50%; width: min(68vw, 760px); aspect-ratio: 1; color: var(--purple); border: 1px solid rgba(103,13,140,.8); border-radius: 50%; transform: translate(-50%,-50%); opacity: 0; }
 .cinematic-reticle::before, .cinematic-reticle::after { content: ''; position: absolute; inset: 13%; border: 1px solid rgba(0,0,0,.4); border-radius: 50%; }
 .cinematic-reticle::after { inset: 42%; border-color: rgba(103,13,140,.9); }
@@ -276,6 +266,7 @@ img { display: block; max-width: 100%; }
 
 .rrss-intro, .rrss-process, .rrss-services { position: relative; padding: clamp(96px, 12vh, 120px) 0 clamp(40px, 7vh, 80px); overflow: hidden; }
 .division-sequence { position: relative; height: 480svh; background: var(--black); }
+.division-sequence-long { height: 720svh; }
 .division-sequence-sticky { position: sticky; top: 0; height: 100svh; overflow: hidden; background: var(--black); }
 .division-sequence-media, .division-sequence-shade { position: absolute; inset: 0; }
 .division-sequence-media { transform: scale(.78); }
@@ -285,6 +276,7 @@ img { display: block; max-width: 100%; }
 .division-sequence-content .section-intro { border-color: var(--line-dark); }
 .division-sequence-chapter { position: absolute; inset: 0; z-index: 2; height: 100%; display: flex; align-items: center; padding-block: clamp(100px, 15vh, 150px) clamp(32px, 7vh, 80px); opacity: 0; visibility: hidden; pointer-events: none; }
 .division-sequence-chapter-inner { max-width: 600px; }
+.division-sequence-long .division-sequence-chapter-inner { max-width: min(500px, 42vw); }
 .division-sequence-chapter-right .division-sequence-chapter-inner { margin-left: auto; }
 .division-sequence-chapter .display { margin: clamp(24px, 4vh, 44px) 0; font-size: clamp(2.7rem, min(5.5vw, 9vh), 6rem); line-height: .94; }
 .division-sequence-chapter .lead-copy { max-width: 470px; color: rgba(255,255,255,.85); text-shadow: 0 2px 12px rgba(0,0,0,.8); }
@@ -704,6 +696,7 @@ img { display: block; max-width: 100%; }
   .rrss-intro { padding-top: 110px; }
   .division-sequence-content { padding-block: 110px 40px; }
   .division-sequence-chapter { padding-block: 110px 40px; }
+  .division-sequence-long .division-sequence-chapter-inner { max-width: 100%; }
   .division-sequence-shade { background: rgba(0,0,0,.65); }
   .rrss-intro-grid { grid-template-columns: 1fr; gap: 36px; padding-top: 40px; }
   .process-steps, .services-list { grid-template-columns: 1fr; }

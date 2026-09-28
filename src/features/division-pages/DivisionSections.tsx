@@ -33,14 +33,14 @@ export function DivisionIntro({ id, theme = 'dark', eyebrow, index, title, parag
   )
 }
 
+type SequenceChapter = { eyebrow: string; title: ReactNode; body: string }
+
 export type DivisionSequenceIntroProps = DivisionIntroProps & {
   frameCount: number
   frameUrl: (index: number) => string
   ariaLabel: string
-  chapters: readonly [
-    { eyebrow: string; title: ReactNode; body: string },
-    { eyebrow: string; title: ReactNode; body: string },
-  ]
+  chapters: readonly [SequenceChapter, SequenceChapter] | readonly [SequenceChapter, SequenceChapter, SequenceChapter, SequenceChapter]
+  zoomFrames?: number
 }
 
 const smoothStep = (start: number, end: number, value: number) => {
@@ -48,23 +48,32 @@ const smoothStep = (start: number, end: number, value: number) => {
   return t * t * (3 - 2 * t)
 }
 
-export function DivisionSequenceIntro({ id, eyebrow, index, title, paragraphs, frameCount, frameUrl, ariaLabel, chapters }: DivisionSequenceIntroProps) {
+const TWO_CHAPTER_PHASES = [[0.3, 0.4, 0.56, 0.64], [0.66, 0.75, 0.91, 0.99]] as const
+const FOUR_CHAPTER_PHASES = [
+  [0.22, 0.27, 0.36, 0.39],
+  [0.41, 0.46, 0.55, 0.58],
+  [0.6, 0.65, 0.74, 0.77],
+  [0.79, 0.84, 0.94, 0.99],
+] as const
+
+export function DivisionSequenceIntro({ id, eyebrow, index, title, paragraphs, frameCount, frameUrl, ariaLabel, chapters, zoomFrames = 48 }: DivisionSequenceIntroProps) {
   const copyRef = useRef<HTMLDivElement>(null)
   const mediaRef = useRef<HTMLDivElement>(null)
   const chapterRefs = useRef<(HTMLElement | null)[]>([])
   const syncSceneToFrame = useCallback((frame: number) => {
     const media = mediaRef.current
-    if (media) media.style.transform = `scale(${0.78 + Math.min(1, frame / 48) * 0.22})`
+    if (media) media.style.transform = `scale(${0.78 + Math.min(1, frame / zoomFrames) * 0.22})`
 
     const progress = frame / (frameCount - 1)
-    const introOpacity = 1 - smoothStep(0.14, 0.24, progress)
+    const isFourChapters = chapters.length === 4
+    const introOpacity = 1 - smoothStep(isFourChapters ? 0.13 : 0.14, isFourChapters ? 0.2 : 0.24, progress)
     if (copyRef.current) {
       copyRef.current.style.opacity = String(introOpacity)
       copyRef.current.style.visibility = introOpacity > 0 ? 'visible' : 'hidden'
       copyRef.current.style.transform = `translateY(${-24 * (1 - introOpacity)}px)`
     }
 
-    const phases = [[0.3, 0.4, 0.56, 0.64], [0.66, 0.75, 0.91, 0.99]] as const
+    const phases: readonly (readonly [number, number, number, number])[] = isFourChapters ? FOUR_CHAPTER_PHASES : TWO_CHAPTER_PHASES
     chapterRefs.current.forEach((chapter, index) => {
       if (!chapter) return
       const [enterStart, enterEnd, exitStart, exitEnd] = phases[index]
@@ -73,10 +82,10 @@ export function DivisionSequenceIntro({ id, eyebrow, index, title, paragraphs, f
       chapter.style.visibility = opacity > 0 ? 'visible' : 'hidden'
       chapter.style.transform = `translateY(${24 * (1 - opacity)}px)`
     })
-  }, [frameCount])
+  }, [chapters.length, frameCount, zoomFrames])
 
   return (
-    <section id={id} className="division-sequence section-dark route-page" aria-labelledby={`${id}-title`}>
+    <section id={id} className={`division-sequence section-dark route-page${chapters.length === 4 ? ' division-sequence-long' : ''}`} aria-labelledby={`${id}-title`}>
       <div className="division-sequence-sticky">
         <div ref={mediaRef} className="division-sequence-media">
           <ScrollFrameSequence
@@ -100,7 +109,7 @@ export function DivisionSequenceIntro({ id, eyebrow, index, title, paragraphs, f
           <section
             key={chapter.eyebrow}
             ref={(element) => { chapterRefs.current[chapterIndex] = element }}
-            className={`division-sequence-chapter page-shell${chapterIndex === 1 ? ' division-sequence-chapter-right' : ''}`}
+            className={`division-sequence-chapter page-shell${chapterIndex % 2 === 1 ? ' division-sequence-chapter-right' : ''}`}
             aria-labelledby={`${id}-chapter-${chapterIndex}-title`}
           >
             <div className="division-sequence-chapter-inner">

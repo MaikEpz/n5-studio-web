@@ -16,7 +16,6 @@ import { SiteFooter } from '@shared/ui/SiteFooter'
 import { usePageNavigation } from '@infrastructure/navigation/usePageNavigation'
 import { useStudioContent } from '@features/studio/useStudioContent'
 import { ScrollFrameSequence } from '@shared/ui/ScrollFrameSequence'
-import { LoadingScreen } from '@shared/ui/LoadingScreen'
 import { BrandLogo } from '@shared/ui/BrandLogo'
 import { dependencies } from '@app/dependencies'
 import { ContactPage } from '@features/contact/ContactPage'
@@ -80,7 +79,16 @@ export function StudioPage() {
   const [viewVersion, setViewVersion] = useState(0)
   const refreshAnimations = useCallback(() => setViewVersion((version) => version + 1), [])
   const contentState = useStudioContent(dependencies.studioContentRepository)
-  const { active, scrolled, navigate, scrollToId } = usePageNavigation(contentState.status === 'success')
+  const { active, scrolled, navigate, scrollToId } = usePageNavigation(contentState.status === 'success', viewVersion)
+
+  useEffect(() => {
+    if (contentState.status === 'idle' || contentState.status === 'loading') return
+    const preloader = document.getElementById('initial-preloader')
+    if (!preloader) return
+    preloader.classList.add('is-hidden')
+    const timeout = window.setTimeout(() => preloader.remove(), 400)
+    return () => window.clearTimeout(timeout)
+  }, [contentState.status])
 
   useLayoutEffect(() => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -290,7 +298,7 @@ export function StudioPage() {
     return () => context.revert()
   }, [contentState.status, active, viewVersion])
 
-  if (contentState.status === 'idle' || contentState.status === 'loading') return <LoadingScreen />
+  if (contentState.status === 'idle' || contentState.status === 'loading') return null
   if (contentState.status === 'error') return <div className="app-status" role="alert">No fue posible cargar el contenido de N5.</div>
   const { creativeSystem, divisions, manifesto } = contentState.data
   const rrssDivision = divisions.find((division) => division.id === 'rrss')

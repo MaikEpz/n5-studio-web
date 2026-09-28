@@ -1,9 +1,11 @@
 import type { PageId } from '@application/navigation/navigation'
 import type { Division } from '@domain/studio/models'
 import { ContactCta } from '@features/home/HomeSections'
-import { ColumnsSection, DivisionIntro, WorkShowcase } from '@features/division-pages/DivisionSections'
+import { ColumnsSection, DivisionSequenceIntro, WorkShowcase } from '@features/division-pages/DivisionSections'
 
 type LabsPageProps = { division: Division; onNavigate: (id: PageId) => void }
+
+const getLabsFrameUrl = (index: number) => `/video/labs/${String(index + 1).padStart(3, '0')}.webp`
 
 // Estructura según la arquitectura de Miro: Qué hacemos, VR / MR, 3D, Apps, Interactive, Selected Work y CTA.
 // Contenido provisional: textos y proyectos deben reemplazarse por los reales de N5 Labs.
@@ -23,12 +25,22 @@ const selectedWork = [
 export function LabsPage({ division, onNavigate }: LabsPageProps) {
   return (
     <>
-      <DivisionIntro
+      <DivisionSequenceIntro
         id="labs-que-hacemos"
         eyebrow={division.name}
         index="Qué hacemos"
         title={<>Nuevas formas<br /><em>de interactuar.</em></>}
         paragraphs={division.intro}
+        frameCount={300}
+        frameUrl={getLabsFrameUrl}
+        ariaLabel="Secuencia de una manzana que se transforma en una red tecnológica interactiva"
+        zoomFrames={60}
+        chapters={[
+          { eyebrow: areas[0].title, title: <>Entrar en<br /><em>otras realidades.</em></>, body: areas[0].body },
+          { eyebrow: areas[1].title, title: <>Dar forma a<br /><em>lo posible.</em></>, body: areas[1].body },
+          { eyebrow: areas[2].title, title: <>Ideas hechas<br /><em>software.</em></>, body: areas[2].body },
+          { eyebrow: areas[3].title, title: <>La tecnología<br /><em>responde.</em></>, body: areas[3].body },
+        ]}
       />
       <ColumnsSection
         id="labs-areas"

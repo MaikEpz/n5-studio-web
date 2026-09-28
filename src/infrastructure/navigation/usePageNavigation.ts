@@ -3,8 +3,9 @@ import Lenis from 'lenis'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { navigationItems, pageFromPathname, type PageId } from '@application/navigation/navigation'
+import { isInsideLongSection, nearestSectionRest } from './sectionFocus'
 
-export function usePageNavigation(enabled = true) {
+export function usePageNavigation(enabled = true, refreshKey = 0) {
   const lenisRef = useRef<Lenis | null>(null)
   const [active, setActive] = useState<PageId>(() => pageFromPathname(window.location.pathname))
   const [scrolled, setScrolled] = useState(false)
@@ -20,6 +21,87 @@ export function usePageNavigation(enabled = true) {
     gsap.ticker.lagSmoothing(0)
     return () => { gsap.ticker.remove(update); lenis.destroy(); lenisRef.current = null }
   }, [enabled])
+
+  useEffect(() => {
+    const lenis = lenisRef.current
+    if (!enabled || !lenis || window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.innerWidth <= 900) return
+
+    let idleTimer: number | undefined
+    let wheelPending = false
+    let snapping = false
+    const clearIdle = () => {
+      if (idleTimer !== undefined) window.clearTimeout(idleTimer)
+      idleTimer = undefined
+    }
+    const interrupt = () => {
+      wheelPending = false
+      clearIdle()
+      if (snapping) {
+        snapping = false
+        lenis.scrollTo(lenis.scroll, { immediate: true })
+      }
+    }
+    const settle = () => {
+      idleTimer = undefined
+      if (!wheelPending || snapping || window.innerWidth <= 900) return
+      if (Math.abs(lenis.targetScroll - lenis.scroll) > 2 || Math.abs(lenis.velocity) > 0.15) {
+        idleTimer = window.setTimeout(settle, 100)
+        return
+      }
+      wheelPending = false
+
+      const viewportHeight = window.innerHeight
+      const sections = Array.from(document.querySelectorAll<HTMLElement>('#contenido > section')).map((element) => ({
+        element,
+        top: element.getBoundingClientRect().top + window.scrollY,
+        height: element.offsetHeight,
+      }))
+      const scroll = lenis.scroll
+      if (isInsideLongSection(scroll, viewportHeight, sections)) return
+
+      const editorial = sections.filter(({ element, height }) =>
+        height <= viewportHeight + 1 &&
+        !element.matches('.hero, .divisions, .division-sequence, .contact-page, .work-index, .has-footer') &&
+        !element.querySelector('input, textarea, select, [contenteditable]'),
+      )
+      const target = nearestSectionRest(scroll, viewportHeight, editorial, lenis.limit)
+      if (target === null) return
+
+      snapping = true
+      lenis.scrollTo(target, {
+        duration: 0.65,
+        easing: (t) => 1 - (1 - t) ** 3,
+        onComplete: () => { snapping = false },
+      })
+    }
+    const onWheel = (event: WheelEvent) => {
+      interrupt()
+      if (event.ctrlKey || event.defaultPrevented || (event.target instanceof Element && event.target.closest('[data-lenis-prevent], input, textarea, select, [contenteditable]'))) return
+      wheelPending = true
+      idleTimer = window.setTimeout(settle, 180)
+    }
+    const onScroll = () => {
+      if (!wheelPending || snapping) return
+      clearIdle()
+      idleTimer = window.setTimeout(settle, 180)
+    }
+
+    const unsubscribe = lenis.on('scroll', onScroll)
+    window.addEventListener('wheel', onWheel, { passive: true, capture: true })
+    window.addEventListener('pointerdown', interrupt, { capture: true })
+    window.addEventListener('touchstart', interrupt, { passive: true })
+    window.addEventListener('keydown', interrupt)
+    window.addEventListener('resize', interrupt)
+    return () => {
+      interrupt()
+      unsubscribe()
+      window.removeEventListener('wheel', onWheel, true)
+      window.removeEventListener('pointerdown', interrupt, true)
+      window.removeEventListener('touchstart', interrupt)
+      window.removeEventListener('keydown', interrupt)
+      window.removeEventListener('resize', interrupt)
+    }
+  }, [active, enabled, refreshKey])
 
   const navigate = useCallback((id: PageId, replace = false) => {
     const destination = navigationItems.find((item) => item.id === id)
