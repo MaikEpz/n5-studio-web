@@ -216,7 +216,6 @@ export function DivisionPanel({ divisions, onNavigate }: DivisionPanelProps) {
         <div className="division-header-shell page-shell">
           <div className="section-intro">
             <p className="eyebrow eyebrow-accent">Divisiones</p>
-            <p className="section-index">Tres especialidades</p>
           </div>
         </div>
 

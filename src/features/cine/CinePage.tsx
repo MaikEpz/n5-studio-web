@@ -1,9 +1,11 @@
 import type { PageId } from '@application/navigation/navigation'
 import type { Division } from '@domain/studio/models'
 import { ContactCta } from '@features/home/HomeSections'
-import { ColumnsSection, DivisionIntro, WorkShowcase } from '@features/division-pages/DivisionSections'
+import { ColumnsSection, DivisionSequenceIntro, WorkShowcase } from '@features/division-pages/DivisionSections'
 
 type CinePageProps = { division: Division; onNavigate: (id: PageId) => void }
+
+const getCineFrameUrl = (index: number) => `/video/cine/frame_${String(index + 35).padStart(3, '0')}.webp`
 
 // Estructura según la arquitectura de Miro: Filosofía, Documentales, Cortometrajes, Largometrajes,
 // Cine para redes, En desarrollo y CTA.
@@ -24,12 +26,19 @@ const inDevelopment = [
 export function CinePage({ division, onNavigate }: CinePageProps) {
   return (
     <>
-      <DivisionIntro
+      <DivisionSequenceIntro
         id="cine-filosofia"
         eyebrow={division.name}
         index="Filosofía"
         title={<>Historias que<br /><em>permanecen.</em></>}
         paragraphs={division.intro}
+        frameCount={193}
+        frameUrl={getCineFrameUrl}
+        ariaLabel="Secuencia cinematográfica de una cámara fotográfica que se desmonta y se transforma"
+        chapters={[
+          { eyebrow: 'Documentales', title: <>La fuerza de<br /><em>lo real.</em></>, body: formats[0].body },
+          { eyebrow: 'Cortometrajes', title: <>Historias con<br /><em>voz propia.</em></>, body: formats[1].body },
+        ]}
       />
       <ColumnsSection
         id="cine-formatos"

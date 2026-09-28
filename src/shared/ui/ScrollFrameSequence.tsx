@@ -4,31 +4,39 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// 95 fotogramas (de 000 a 094, descartando los últimos 7)
-const TOTAL_FRAMES = 95
+// El Home utiliza los primeros 95 fotogramas de su secuencia original.
+const HOME_FRAME_COUNT = 95
 
-function getFrameUrl(index: number): string {
+function getHomeFrameUrl(index: number): string {
   const paddedIndex = String(index).padStart(3, '0')
   return `/video/Quiero_un_video_para_una_web__${paddedIndex}.webp`
 }
 
-interface HeroVideoSequenceProps {
+interface ScrollFrameSequenceProps {
   triggerSelector?: string
   className?: string
+  frameCount?: number
+  frameUrl?: (index: number) => string
+  ariaLabel?: string
+  onFrameChange?: (index: number) => void
 }
 
-export function HeroVideoSequence({
+export function ScrollFrameSequence({
   triggerSelector = '#inicio',
   className = 'hero-sequence-canvas',
-}: HeroVideoSequenceProps) {
+  frameCount = HOME_FRAME_COUNT,
+  frameUrl = getHomeFrameUrl,
+  ariaLabel = 'Secuencia cinematográfica nocturna observada a través del diafragma de una lente de cámara',
+  onFrameChange,
+}: ScrollFrameSequenceProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const currentFrameRef = useRef(0)
-  const imagesRef = useRef<(HTMLImageElement | null)[]>(new Array(TOTAL_FRAMES).fill(null))
-  const isLoadedRef = useRef<boolean[]>(new Array(TOTAL_FRAMES).fill(false))
+  const imagesRef = useRef<(HTMLImageElement | null)[]>(new Array(frameCount).fill(null))
+  const isLoadedRef = useRef<boolean[]>(new Array(frameCount).fill(false))
   const animFrameIdRef = useRef<number | null>(null)
   const isVisibleRef = useRef(true)
 
-  // Medidas cacheadas para evitar forzar reflow (getBoundingClientRect) en cada tick de scroll
+  // Medidas de layout sin transformaciones para mantener nítido el canvas durante el zoom.
   const dimensionsRef = useRef<{ width: number; height: number; dpr: number }>({
     width: 0,
     height: 0,
@@ -50,16 +58,15 @@ export function HeroVideoSequence({
     // Actualizar dimensiones sin forzar reflow en cada scroll
     const updateDimensions = () => {
       if (!canvas) return
-      const rect = canvas.getBoundingClientRect()
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       dimensionsRef.current = {
-        width: rect.width,
-        height: rect.height,
+        width: canvas.clientWidth,
+        height: canvas.clientHeight,
         dpr,
       }
 
-      const targetWidth = Math.round(rect.width * dpr)
-      const targetHeight = Math.round(rect.height * dpr)
+      const targetWidth = Math.round(canvas.clientWidth * dpr)
+      const targetHeight = Math.round(canvas.clientHeight * dpr)
 
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
         canvas.width = targetWidth
@@ -79,7 +86,7 @@ export function HeroVideoSequence({
       if (!imgToDraw || !imgToDraw.naturalWidth) {
         let bestDistance = Infinity
         let bestIndex = -1
-        for (let i = 0; i < TOTAL_FRAMES; i++) {
+        for (let i = 0; i < frameCount; i++) {
           if (isLoaded[i] && images[i]?.naturalWidth) {
             const distance = Math.abs(i - targetIndex)
             if (distance < bestDistance) {
@@ -150,23 +157,24 @@ export function HeroVideoSequence({
         const step = Math.abs(eased) < Math.abs(minStep) ? minStep : eased
         playhead += Math.max(-MAX_FRAMES_PER_TICK, Math.min(MAX_FRAMES_PER_TICK, step))
       }
-      const frame = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(playhead)))
+      const frame = Math.min(frameCount - 1, Math.max(0, Math.round(playhead)))
       if (frame !== currentFrameRef.current) {
         currentFrameRef.current = frame
+        onFrameChange?.(frame)
         render()
       }
       if (playhead !== targetFrame) playbackId = requestAnimationFrame(tick)
     }
 
     const setTargetFrame = (frame: number) => {
-      targetFrame = Math.min(TOTAL_FRAMES - 1, Math.max(0, frame))
+      targetFrame = Math.min(frameCount - 1, Math.max(0, frame))
       if (playbackId === null) playbackId = requestAnimationFrame(tick)
     }
 
     // Carga y decodificación en hilo secundario mediante img.decode() para eliminar jank
     const loadSingleImage = async (index: number) => {
       const img = new Image()
-      img.src = getFrameUrl(index)
+      img.src = frameUrl(index)
 
       try {
         // img.decode() procesa la descompresión del WebP en segundo plano antes de pintar
@@ -186,13 +194,21 @@ export function HeroVideoSequence({
       }
     }
 
-    // 1. Cargar fotograma 0 inmediatamente
-    loadSingleImage(0)
-
-    // 2. Precargar el resto progresivamente con prioridad en los primeros fotogramas
-    for (let i = 1; i < TOTAL_FRAMES; i++) {
-      loadSingleImage(i)
+    // Mostrar el primer fotograma de inmediato y limitar las descargas simultáneas.
+    void loadSingleImage(0)
+    let nextFrame = 1
+    let activeLoads = 0
+    const loadNext = () => {
+      while (!isDisposed && activeLoads < 6 && nextFrame < frameCount) {
+        const index = nextFrame++
+        activeLoads++
+        void loadSingleImage(index).finally(() => {
+          activeLoads--
+          loadNext()
+        })
+      }
     }
+    loadNext()
 
     // Observer de redimensionamiento: recalcula dimensiones cacheadas
     const resizeObserver = new ResizeObserver(() => {
@@ -218,13 +234,14 @@ export function HeroVideoSequence({
       trigger: triggerSelector,
       start: 'top top',
       end: 'bottom bottom',
-      onUpdate: (self) => setTargetFrame(self.progress * (TOTAL_FRAMES - 1)),
+      onUpdate: (self) => setTargetFrame(self.progress * (frameCount - 1)),
     })
     // Si la página se abre ya desplazada, se muestra directamente el fotograma de esa posición.
     if (scrollTrigger) {
-      targetFrame = playhead = scrollTrigger.progress * (TOTAL_FRAMES - 1)
+      targetFrame = playhead = scrollTrigger.progress * (frameCount - 1)
       currentFrameRef.current = Math.round(playhead)
     }
+    onFrameChange?.(currentFrameRef.current)
 
     queueRender()
 
@@ -238,14 +255,14 @@ export function HeroVideoSequence({
       if (playbackId !== null) cancelAnimationFrame(playbackId)
       scrollTrigger?.kill()
     }
-  }, [triggerSelector])
+  }, [triggerSelector, frameCount, frameUrl, onFrameChange])
 
   return (
     <canvas
       ref={canvasRef}
       className={className}
       role="img"
-      aria-label="Secuencia cinematográfica nocturna observada a través del diafragma de una lente de cámara"
+      aria-label={ariaLabel}
     />
   )
 }

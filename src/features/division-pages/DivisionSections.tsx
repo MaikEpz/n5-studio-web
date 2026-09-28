@@ -1,5 +1,6 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useCallback, useRef, type CSSProperties, type ReactNode } from 'react'
 import type { PageId } from '@application/navigation/navigation'
+import { ScrollFrameSequence } from '@shared/ui/ScrollFrameSequence'
 import { ScrollScene } from '@shared/ui/ScrollScene'
 
 // Bloques de las páginas de división con el mismo estilo que N5 RRSS y Work:
@@ -27,6 +28,88 @@ export function DivisionIntro({ id, theme = 'dark', eyebrow, index, title, parag
           <h2 id={`${id}-title`} className="display reveal reveal-left">{title}</h2>
           <div className="lead-copy reveal reveal-right">{paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
         </div>
+      </div>
+    </section>
+  )
+}
+
+export type DivisionSequenceIntroProps = DivisionIntroProps & {
+  frameCount: number
+  frameUrl: (index: number) => string
+  ariaLabel: string
+  chapters: readonly [
+    { eyebrow: string; title: ReactNode; body: string },
+    { eyebrow: string; title: ReactNode; body: string },
+  ]
+}
+
+const smoothStep = (start: number, end: number, value: number) => {
+  const t = Math.max(0, Math.min(1, (value - start) / (end - start)))
+  return t * t * (3 - 2 * t)
+}
+
+export function DivisionSequenceIntro({ id, eyebrow, index, title, paragraphs, frameCount, frameUrl, ariaLabel, chapters }: DivisionSequenceIntroProps) {
+  const copyRef = useRef<HTMLDivElement>(null)
+  const mediaRef = useRef<HTMLDivElement>(null)
+  const chapterRefs = useRef<(HTMLElement | null)[]>([])
+  const syncSceneToFrame = useCallback((frame: number) => {
+    const media = mediaRef.current
+    if (media) media.style.transform = `scale(${0.78 + Math.min(1, frame / 48) * 0.22})`
+
+    const progress = frame / (frameCount - 1)
+    const introOpacity = 1 - smoothStep(0.14, 0.24, progress)
+    if (copyRef.current) {
+      copyRef.current.style.opacity = String(introOpacity)
+      copyRef.current.style.visibility = introOpacity > 0 ? 'visible' : 'hidden'
+      copyRef.current.style.transform = `translateY(${-24 * (1 - introOpacity)}px)`
+    }
+
+    const phases = [[0.3, 0.4, 0.56, 0.64], [0.66, 0.75, 0.91, 0.99]] as const
+    chapterRefs.current.forEach((chapter, index) => {
+      if (!chapter) return
+      const [enterStart, enterEnd, exitStart, exitEnd] = phases[index]
+      const opacity = smoothStep(enterStart, enterEnd, progress) * (1 - smoothStep(exitStart, exitEnd, progress))
+      chapter.style.opacity = String(opacity)
+      chapter.style.visibility = opacity > 0 ? 'visible' : 'hidden'
+      chapter.style.transform = `translateY(${24 * (1 - opacity)}px)`
+    })
+  }, [frameCount])
+
+  return (
+    <section id={id} className="division-sequence section-dark route-page" aria-labelledby={`${id}-title`}>
+      <div className="division-sequence-sticky">
+        <div ref={mediaRef} className="division-sequence-media">
+          <ScrollFrameSequence
+            triggerSelector={`#${id}`}
+            className="division-sequence-canvas"
+            frameCount={frameCount}
+            frameUrl={frameUrl}
+            ariaLabel={ariaLabel}
+            onFrameChange={syncSceneToFrame}
+          />
+        </div>
+        <div className="division-sequence-shade" aria-hidden="true" />
+        <div ref={copyRef} className="division-sequence-content page-shell">
+          <div className="section-intro"><p className="eyebrow">{eyebrow}</p><p className="section-index">{index}</p></div>
+          <div className="rrss-intro-grid">
+            <h2 id={`${id}-title`} className="display">{title}</h2>
+            <div className="lead-copy">{paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
+          </div>
+        </div>
+        {chapters.map((chapter, chapterIndex) => (
+          <section
+            key={chapter.eyebrow}
+            ref={(element) => { chapterRefs.current[chapterIndex] = element }}
+            className={`division-sequence-chapter page-shell${chapterIndex === 1 ? ' division-sequence-chapter-right' : ''}`}
+            aria-labelledby={`${id}-chapter-${chapterIndex}-title`}
+          >
+            <div className="division-sequence-chapter-inner">
+              <p className="eyebrow eyebrow-accent">{chapter.eyebrow}</p>
+              <h3 id={`${id}-chapter-${chapterIndex}-title`} className="display">{chapter.title}</h3>
+              <p className="lead-copy">{chapter.body}</p>
+            </div>
+          </section>
+        ))}
       </div>
     </section>
   )

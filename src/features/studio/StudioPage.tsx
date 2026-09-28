@@ -15,8 +15,9 @@ import { ScrollScene } from '@shared/ui/ScrollScene'
 import { SiteFooter } from '@shared/ui/SiteFooter'
 import { usePageNavigation } from '@infrastructure/navigation/usePageNavigation'
 import { useStudioContent } from '@features/studio/useStudioContent'
-import { HeroVideoSequence } from '@features/studio/HeroVideoSequence'
+import { ScrollFrameSequence } from '@shared/ui/ScrollFrameSequence'
 import { LoadingScreen } from '@shared/ui/LoadingScreen'
+import { BrandLogo } from '@shared/ui/BrandLogo'
 import { dependencies } from '@app/dependencies'
 import { ContactPage } from '@features/contact/ContactPage'
 
@@ -306,7 +307,7 @@ export function StudioPage() {
             <ScrollScene />
             <div className="hero-sticky">
               <div className="hero-image">
-                <HeroVideoSequence triggerSelector="#inicio" />
+                <ScrollFrameSequence triggerSelector="#inicio" />
               </div>
               <div className="hero-shade" /><div className="noise" aria-hidden="true" />
               <div className="hero-progress" aria-hidden="true"><span /></div>
@@ -316,7 +317,7 @@ export function StudioPage() {
                   <div className="hero-brand-block">
                     <h1 id="hero-title" className="hero-title" aria-label="N5 Studio">
                       <span className="line">
-                        <span className="hero-title-n5">N5</span>
+                        <span className="hero-title-n5"><BrandLogo /></span>
                         <span className="hero-title-studio">Studio</span>
                       </span>
                     </h1>
@@ -352,7 +353,7 @@ export function StudioPage() {
             </div>
           </section>
 
-          <section id="divisiones" className="divisions section-light" aria-labelledby="divisions-title">
+          <section id="divisiones" className="divisions section-dark" aria-labelledby="divisions-title">
             <ScrollScene />
             <div className="division-list"><DivisionPanel divisions={divisions} onNavigate={navigate} /></div>
           </section>
